@@ -37,9 +37,10 @@ init_query() {
 
     # Get static CPU information
     if [[ -z "$CPUINFO_MODEL" ]]; then
-        CPUINFO_MODEL=$(lscpu | awk -F': ' '/Model name/ {gsub(/^ *| *$| CPU.*/,"",$2); print $2}')
+        CPUINFO_MODEL=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ *//' | sed 's/ CPU.*//')
         echo "CPUINFO_MODEL=\"$CPUINFO_MODEL\"" >>"${cpu_info_file}"
     fi
+
     if [[ -z "$CPUINFO_MAX_FREQ" ]]; then
         CPUINFO_MAX_FREQ=$(lscpu | awk '/CPU max MHz/ { sub(/\..*/,"",$4); print $4}')
         echo "CPUINFO_MAX_FREQ=\"$CPUINFO_MAX_FREQ\"" >>"${cpu_info_file}"
@@ -68,7 +69,7 @@ get_temp_color() {
         [70]="#ff6347" # Tomato for 70 to 74
         [65]="#ff8c00" # Dark Orange for 65 to 69
         [60]="#ffa500" # Orange for 60 to 64
-        [45]=""        # No color for 45 to 59
+        [45]="#5fb0b8" # Bleu vert
         [40]="#add8e6" # Light Blue for 40 to 44
         [35]="#87ceeb" # Sky Blue for 35 to 39
         [30]="#4682b4" # Steel Blue for 30 to 34
@@ -88,6 +89,39 @@ get_temp_color() {
             return
         fi
     done
+}
+
+get_use_color() {
+    local utilization=$1
+    local utilization_int=${utilization%.*}  # Convertir en entier en supprimant la partie décimale
+    declare -A util_colors=(
+        [90]="#ff5555"  # Rouge vif (Dracula Red)
+        [85]="#ff6e67"  # Rouge orangé
+        [80]="#ff9248"  # Orange intense
+        [75]="#ffb86c"  # Orange clair (Dracula Orange)
+        [70]="#f1fa8c"  # Jaune vert (Dracula Yellow)
+        [65]="#50fa7b"  # Vert vif (Dracula Green)
+        [60]="#8be9fd"  # Cyan (Dracula Cyan)
+        [55]="#79dac8"  # Turquoise
+        [50]="#66cdaa"  # Vert bleuté
+        [45]="#5fb0b8"  # Bleu vert
+        [40]="#5f87b8"  # Bleu
+        [35]="#6272a4"  # Bleu mauve (Dracula Comment)
+        [30]="#bd93f9"  # Violet (Dracula Purple)
+        [25]="#a38ee0"  # Violet moyen
+        [20]="#8c7ae6"  # Violet intense
+        [0]="#44475a"   # Bleu gris foncé (Dracula Selection)
+    )
+
+    for threshold in $(echo "${!util_colors[@]}" | tr ' ' '\n' | sort -nr); do
+        if (( utilization_int >= threshold )); then
+            color=${util_colors[$threshold]}
+            echo "<span color='$color'><b>${utilization}%</b></span>"
+            return
+        fi
+    done
+    # Fallback to default color if no threshold matches
+    echo "<span color='#8be9fd'><b>${utilization}%</b></span>"
 }
 
 get_utilization() {
@@ -165,13 +199,19 @@ speedo="${icons:0:1}"
 thermo="${icons:1:1}"
 emoji="${icons:2}"
 
+# Get color based on utilization
+utilization_color=$(get_use_color "$utilization")
+temp_color=$(get_temp_color "$temperature")
+
 # Prepare the tooltip string
 tooltip_str="$emoji $CPUINFO_MODEL\n"
 [[ -n "$thermo" ]] && tooltip_str+="$thermo Temperature: \n\t$cpu_temps \n"
-[[ -n "$speedo" ]] && tooltip_str+="$speedo Utilization: $utilization%\n"
+[[ -n "$speedo" ]] && tooltip_str+="$speedo Utilization: $utilization_color\n"
 tooltip_str+=" Clock Speed: $frequency/$CPUINFO_MAX_FREQ MHz"
 
 # Print the output
 cat <<JSON
-{"text":"$thermo $(get_temp_color "${temperature}")", "tooltip":"$tooltip_str"}
+{"text":"CPU: $speedo $utilization_color / $thermo $temp_color", "tooltip":"$tooltip_str"}
 JSON
+
+

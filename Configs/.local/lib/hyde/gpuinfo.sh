@@ -180,20 +180,20 @@ map_floor() {
 get_temp_color() {
   local temp=$1
   declare -A temp_colors=(
-    [90]="#8b0000" # Dark Red for 90 and above
-    [85]="#ad1f2f" # Red for 85 to 89
-    [80]="#d22f2f" # Light Red for 80 to 84
-    [75]="#ff471a" # Orange-Red for 75 to 79
-    [70]="#ff6347" # Tomato for 70 to 74
-    [65]="#ff8c00" # Dark Orange for 65 to 69
-    [60]="#ffa500" # Orange for 60 to 64
-    [45]=""        # No color for 45 to 59
-    [40]="#add8e6" # Light Blue for 40 to 44
-    [35]="#87ceeb" # Sky Blue for 35 to 39
-    [30]="#4682b4" # Steel Blue for 30 to 34
-    [25]="#4169e1" # Royal Blue for 25 to 29
-    [20]="#0000ff" # Blue for 20 to 24
-    [0]="#00008b"  # Dark Blue for below 20
+        [90]="#8b0000" # Dark Red for 90 and above
+        [85]="#ad1f2f" # Red for 85 to 89
+        [80]="#d22f2f" # Light Red for 80 to 84
+        [75]="#ff471a" # Orange-Red for 75 to 79
+        [70]="#ff6347" # Tomato for 70 to 74
+        [65]="#ff8c00" # Dark Orange for 65 to 69
+        [60]="#ffa500" # Orange for 60 to 64
+        [45]=""        # No color for 45 to 59
+        [40]="#add8e6" # Light Blue for 40 to 44
+        [35]="#87ceeb" # Sky Blue for 35 to 39
+        [30]="#4682b4" # Steel Blue for 30 to 34
+        [25]="#4169e1" # Royal Blue for 25 to 29
+        [20]="#0000ff" # Blue for 20 to 24
+        [0]="#00008b"  # Dark Blue for below 20
   )
 
   for threshold in $(echo "${!temp_colors[@]}" | tr ' ' '\n' | sort -nr); do
@@ -209,6 +209,39 @@ get_temp_color() {
   done
 }
 
+get_use_color() {
+    local utilization=$1
+    local utilization_int=${utilization%.*}  # Convertir en entier en supprimant la partie décimale
+    declare -A util_colors=(
+        [90]="#ff5555"  # Rouge vif (Dracula Red)
+        [85]="#ff6e67"  # Rouge orangé
+        [80]="#ff9248"  # Orange intense
+        [75]="#ffb86c"  # Orange clair (Dracula Orange)
+        [70]="#f1fa8c"  # Jaune vert (Dracula Yellow)
+        [65]="#50fa7b"  # Vert vif (Dracula Green)
+        [60]="#8be9fd"  # Cyan (Dracula Cyan)
+        [55]="#79dac8"  # Turquoise
+        [50]="#66cdaa"  # Vert bleuté
+        [45]="#5fb0b8"  # Bleu vert
+        [40]="#5f87b8"  # Bleu
+        [35]="#6272a4"  # Bleu mauve (Dracula Comment)
+        [30]="#bd93f9"  # Violet (Dracula Purple)
+        [25]="#a38ee0"  # Violet moyen
+        [20]="#8c7ae6"  # Violet intense
+        [0]="#44475a"   # Bleu gris foncé (Dracula Selection)
+    )
+
+    for threshold in $(echo "${!util_colors[@]}" | tr ' ' '\n' | sort -nr); do
+        if (( utilization_int >= threshold )); then
+            color=${util_colors[$threshold]}
+            echo "<span color='$color'><b>${utilization}%</b></span>"
+            return
+        fi
+    done
+    # Fallback to default color if no threshold matches
+    echo "<span color='#8be9fd'><b>${utilization}%</b></span>"
+}
+
 generate_json() {
 
   if [[ $GPUINFO_EMOJI -ne 1 ]]; then
@@ -219,18 +252,19 @@ generate_json() {
   util_lv="90:, 60:󰓅, 30:󰾅, 󰾆"
 
   # Generate glyphs
-  icons="$(map_floor "$util_lv" "$utilization")$(map_floor "$temp_lv" "${temperature}")"
+  icons="$(map_floor "$util_lv" "$use_color")$(map_floor "$temp_lv" "${temperature}")"
   speedo=${icons:0:1}
   thermo=${icons:1:1}
   emoji=${icons:2}
   temp_color=$(get_temp_color "${temperature}")
+  use_color=$(get_use_color "${utilization}")
 
   # Create the JSON string with colored temperature
-  local json="{\"text\":\"${thermo} ${temp_color}\", \"tooltip\":\"${emoji} ${primary_gpu}\n${thermo} Temperature: ${temp_color}"
+  local json="{\"text\":\"GPU: ${speedo} ${use_color} \/ ${thermo} ${temp_color}\", \"tooltip\":\"${emoji} ${primary_gpu}\n${thermo} Temperature: ${temp_color}"
 
   #TODO Add Something incase needed.
   declare -A tooltip_parts
-  if [[ -n "${utilization}" ]]; then tooltip_parts["\n$speedo Utilization: "]="${utilization}%"; fi
+  if [[ -n "${utilization}" ]]; then tooltip_parts["\n$speedo Utilization: "]="${use_color}%"; fi
   if [[ -n "${current_clock_speed}" ]] && [[ -n "${max_clock_speed}" ]]; then tooltip_parts["\n Clock Speed: "]="${current_clock_speed}/${max_clock_speed} MHz"; fi
   if [[ -n "${core_clock}" ]]; then tooltip_parts["\n Clock Speed: "]="${core_clock} MHz"; fi
   if [[ -n "${power_usage}" ]]; then
