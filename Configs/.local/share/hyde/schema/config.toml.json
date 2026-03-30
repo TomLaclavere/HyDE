@@ -15,18 +15,18 @@
                     }
                 },
                 "backend": {
-                    "default": "swww",
+                    "default": "awww",
                     "description": "Wallpaper backend, requires 'wallpaper.<backend>.sh' as handler script in $PATH",
                     "options": [
-                        "swww",
+                        "awww",
                         "pcmanfm-qt",
                         "mpvpaper",
                         "hyprpaper"
                     ],
                     "type": "string"
                 },
-                "swww": {
-                    "description": "swwwallselect.sh configuration.",
+                "awww": {
+                    "description": "wallpaper select configuration.",
                     "type": "object",
                     "properties": {
                         "framerate": {
@@ -185,12 +185,17 @@
                     }
                 },
                 "wallpaper": {
-                    "description": "swwwallselect.sh configuration.",
+                    "description": "wallpaper select configuration.",
                     "type": "object",
                     "properties": {
                         "scale": {
                             "default": 10,
                             "description": "Scaling for wallpaper.",
+                            "type": "integer"
+                        },
+                        "column_count": {
+                            "default": 3,
+                            "description": "Number of columns for wallpaper selector.",
                             "type": "integer"
                         }
                     }
@@ -233,6 +238,20 @@
                             "default": 6,
                             "description": "Scaling for theme selector.",
                             "type": "integer"
+                        },
+                        "column_count": {
+                            "default": 3,
+                            "description": "Number of columns for theme selector.",
+                            "type": "integer"
+                        },
+                        "thumb_style": {
+                            "description": "Thumbnail style for theme selector.",
+                            "options": [
+                                "sqre",
+                                "quad",
+                                "blur"
+                            ],
+                            "type": "string"
                         }
                     }
                 },
@@ -428,6 +447,11 @@
             "description": "screenshot.sh configuration.",
             "type": "object",
             "properties": {
+                "annotation_enabled": {
+                    "default": true,
+                    "description": "Enable or disable annotation feature.",
+                    "type": "boolean"
+                },
                 "annotation_tool": {
                     "default": "satty",
                     "description": "Annotation tool for screenshots.",
@@ -454,6 +478,19 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "screenshot.ocr": {
+            "description": "OCR configuration.",
+            "type": "object",
+            "properties": {
+                "tesseract_languages": {
+                    "default": [
+                        "eng"
+                    ],
+                    "description": "Place desired languages to use for text recognition. To see installed languages run `tesseract --list-langs`.",
+                    "type": "array"
                 }
             }
         },
@@ -734,9 +771,6 @@
             "type": "object",
             "properties": {
                 "sanitize": {
-                    "default": [
-                        ".*rgba\\(.*,.*,.*,.*\\)"
-                    ],
                     "description": "List of regex to sanitize in the theme.config.",
                     "type": "array",
                     "items": {
@@ -848,6 +882,11 @@
                     "description": "Idle manager.",
                     "type": "string"
                 },
+                "blue_light_filter": {
+                    "default": "hyprsunset",
+                    "description": "Blue-light filter.",
+                    "type": "string"
+                },
                 "lockscreen": {
                     "default": "lockscreen.sh",
                     "description": "Lockscreen.",
@@ -940,7 +979,83 @@
                 }
             }
         },
-        "hyprland_start": {
+        "qt5": {
+            "description": "Qt5 configuration.",
+            "type": "object",
+            "properties": {
+                "font": {
+                    "default": "Canterell",
+                    "description": "Qt5 font.",
+                    "type": "string"
+                },
+                "font_style": {
+                    "description": "Qt5 font style.",
+                    "type": "string"
+                },
+                "font_size": {
+                    "default": 10,
+                    "description": "Qt5 font size.",
+                    "type": "integer"
+                },
+                "monospace_font": {
+                    "default": "CaskaydiaCove Nerd Font Mono",
+                    "description": "Qt5 monospace font.",
+                    "type": "string"
+                },
+                "monospace_font_size": {
+                    "default": 9,
+                    "description": "Qt5 monospace font size.",
+                    "type": "integer"
+                }
+            }
+        },
+        "qt6": {
+            "description": "Qt6 configuration.",
+            "type": "object",
+            "properties": {
+                "font": {
+                    "default": "Canterell",
+                    "description": "Qt6 font.",
+                    "type": "string"
+                },
+                "font_style": {
+                    "description": "Qt6 font style.",
+                    "type": "string"
+                },
+                "font_size": {
+                    "default": 10,
+                    "description": "Qt6 font size.",
+                    "type": "integer"
+                },
+                "monospace_font": {
+                    "default": "CaskaydiaCove Nerd Font Mono",
+                    "description": "Qt6 monospace font.",
+                    "type": "string"
+                },
+                "monospace_font_size": {
+                    "default": 9,
+                    "description": "Qt6 monospace font size.",
+                    "type": "integer"
+                }
+            }
+        },
+        "gtk3": {
+            "description": "GTK3 configuration.",
+            "type": "object",
+            "properties": {
+                "font": {
+                    "default": "Canterell",
+                    "description": "GTK3 font.",
+                    "type": "string"
+                },
+                "font_size": {
+                    "default": 10,
+                    "description": "GTK3 font size.",
+                    "type": "integer"
+                }
+            }
+        },
+        "hyprland-start": {
             "description": "Hyprland start configuration.",
             "type": "object",
             "properties": {
@@ -974,6 +1089,12 @@
                     "description": "Idle daemon.",
                     "type": "string"
                 },
+                "blue_light_filter_daemon": {
+                    "default": "hyprsunset",
+                    "description": "Blue-light filter daemon.",
+                    "type": "string"
+                },
+
                 "image_clipboard": {
                     "default": "wl-paste --type image --watch cliphist store",
                     "description": "Image clipboard.",

@@ -13,6 +13,7 @@ confDir="${XDG_CONFIG_HOME:-$HOME/.config}"
 cacheDir="${XDG_CACHE_HOME:-$HOME/.cache}/hyde"
 aurList=("yay" "paru")
 shlList=("zsh" "fish")
+pacmanCmd=${cloneDir}/Configs/.local/lib/hyde/pm.sh
 
 export cloneDir
 export confDir
@@ -48,7 +49,7 @@ chk_list() {
 pkg_available() {
     local PkgIn=$1
 
-    if pacman -Si "${PkgIn}" &>/dev/null; then
+    if ${pacmanCmd} query "${PkgIn}" &>/dev/null; then
         return 0
     else
         return 1
@@ -59,7 +60,7 @@ aur_available() {
     local PkgIn=$1
 
     # shellcheck disable=SC2154
-    if ${aurhlpr} -Si "${PkgIn}" &>/dev/null; then
+    if ${pacmanCmd} info "${PkgIn}" &>/dev/null; then
         return 0
     else
         return 1
