@@ -3,12 +3,17 @@
     "exec": "hyde-shell weather",
     "tooltip": true,
 <<<<<<< HEAD
+<<<<<<< HEAD
     "format": "{}",
     "interval": 1800,
 =======
     "format": "{0}",
     "interval": 30,
 >>>>>>> master
+=======
+    "format": "{}",
+    "interval": 1800,
+>>>>>>> 206072e2 (Custom waybar modules and scripts)
     "return-type": "json"
   }
 }
