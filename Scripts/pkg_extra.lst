@@ -15,6 +15,7 @@ ddcui                                                  # GUI to control brightne
 # --------------------------------------------------- // Misc
 xdg-desktop-portal-gtk                                 # xdg desktop portal using gtk
 wf-recorder                                          # Screen recorder for wlroots-based compositors such as sway
+kimageformats                                          # plugin for heif/heic and other image formats' support(thumbnail,etc) in qt-based apps
 # emote                                                # emoji picker gtk3
 # wl-screenrec                                         # High performance hardware accelerated wlroots screen recorder // NO support for NVIDIA
 # zbar                                                 # Bar/QR code scanner
@@ -62,3 +63,7 @@ duf|fish                                                 # prettier version of d
 
 # --------------------------------------------------- // OSD
 swayosd-git                                             #A GTK based on screen display for keyboard shortcuts like caps-lock and volume
+
+# --------------------------------------------------- // Alternative Bar
+# wayle-bin                                             # Wayland desktop shell (bar, OSD, notifications, wallpaper)
+# matugen-bin|wayle-bin                                 # Material You color generation for dynamic theming
