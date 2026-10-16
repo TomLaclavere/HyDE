@@ -7,6 +7,23 @@
 
 ###### _<div align="right"><a id=-design-by-t2></a><sub>// design by t2</sub></div>_
 
+> [!NOTE]
+> **Fork perso de [HyDE](https://github.com/HyDE-Project/HyDE).** Pour obtenir la même installation :
+>
+> ```shell
+> pacman -S --needed git base-devel
+> git clone https://github.com/TomLaclavere/HyDE ~/HyDE
+> cd ~/HyDE/Scripts
+> ./install.sh pkg_perso.lst
+> ```
+>
+> - `Scripts/pkg_perso.lst` : paquets perso installés en plus de HyDE.
+> - `Scripts/themepatcher.lst` : ajoute le thème Dracula (thème actif).
+> - Configs perso : Hyprland (`userprefs.conf`, `monitors.conf`, keybinds), zsh, waybar (layout `perso`), fastfetch, VS Code, micro, curseur laser (`Super+Shift+L`).
+> - Flatpaks (optionnel) : `Scripts/extra/install_fpk.sh`.
+> - Le thème actif se choisit après l'installation avec `Super+Shift+T` → Dracula.
+
+
 ![hyde_banner](Source/assets/hyde_banner.png)
 
 <!--
