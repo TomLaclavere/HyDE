@@ -6,6 +6,153 @@ All notable changes to 'HyDE' will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to _Modified_ [CalVer](https://calver.org/). See [Versioning](https://github.com/HyDE-Project/HyDE/blob/master/RELEASE_POLICY.md#versioning-yymq) For more info
  -->
 
+## Unreleased
+
+### Added
+- Docs: link to Lua migration guide in `README.md` and `MIGRATION-LUA.md`
+- Waybar: add VSCodium and Chromium icon rules to window module
+- Theme import: the "More Themes" fzf picker (`hydectl theme import`) marks themes already present in `~/.config/hyde/themes` with a "✓ installed" suffix, so browsing the gallery no longer requires cross-checking what's already on disk
+
+### Changed
+
+- Scripts: refactor hyde-shell open to use config.toml , mime . --fallback resolution handling.
+
+
+### Fixed
+- Theme: `theme.switch.sh` no longer `eval`s hyq's `--export env` output when it reads a theme's `hypr.theme` and the state `hyprland.conf`. That output does not escape `$(...)`, backticks or quotes, so a downloaded theme could run commands whenever it was applied (same class as the `color/hypr.sh` fix in #2147). The values are read one by one and assigned as data. Side effects: the cursor and font sizes of a theme are now actually read (the `[int]` query failed on `$VAR = 24` variables, leaving them empty), and `FONT_STYLE` is no longer set to `_STYLE` by a prefix match on `$FONT`. Size values that are not plain integers are ignored, since they are spliced into `sed` commands and config files
+- Theme: a `[hyprland] gtk_theme` (or icon, cursor, font, ...) override in `config.toml` now reaches gsettings too (#2132). `color/hypr.sh` read only the theme's own `hypr.theme` for the Lua ui state that `color/dconf.lua` writes into gsettings on every wallbash run, so the override changed the GTK4 symlink but GTK3 apps that follow gsettings (Firefox, blueman) stayed on the theme's GTK theme. It now applies the state `hyprland.conf` on top of the theme, like `theme.switch.sh`. It also no longer `eval`s hyq's `--export env` output, which does not escape `$(...)`, backticks or quotes: a downloaded theme's `hypr.theme` (or a `config.toml` value) could run commands whenever the wallbash colors were applied; the values are now read one by one and assigned as data, sizes included (an `[int]` query failed on `$VAR = 24` variables). Sizes must be plain integers: they are written unquoted into the Lua ui state, and a theme value like `1, os.execute(...)` would have ended up there as code (also via the older raw-text fallback)
+- Scripts: the scripts that source `hyde-shell` locate it with `command -v` instead of `which` (review on #2120). `which` isn't POSIX and isn't installed everywhere; without it caffeine, hyprlock, hyprsunset, mpvpaper and the wallbash cava/code/dunst scripts failed with "hyde-shell not found" although hyde-shell was there
+- Docs: the Waybar includes README no longer says JSONC files in `waybar/includes/` are added to `includes.json` (#2138). Only the modules directories are; the README now points custom modules to `waybar/modules/` and custom CSS to `user-style.css`
+- Waybar: Caffeine mode no longer turns itself off when switching Waybar layouts or themes (follow-up to #2117). A reload sends SIGUSR2 to every process in Waybar's cgroup (`systemctl --user kill` on its unit), and the `systemd-inhibit` process started by `caffeine.sh` was still in that cgroup. It now runs in its own transient scope when the systemd user manager is reachable, so neither a reload nor stopping or restarting the Waybar unit kills it; it also gets its own session, out of the on-click's process group
+- Docs: the config schema quoted commands that didn't do what they said. `'hyde-shell hyprlock select'` locked the screen, since hyprlock.sh ignores the positional `select`; it is now `'hyde-shell hyprlock --select'`. `'animation.sh select'` and `'cava.sh …'` named scripts that no longer exist and now read `'hyde-shell animations --select'` and `'hyde-shell cava …'`
+- Gestures: the shipped `libinput-gestures.conf` works again. Every gesture was broken: HyDE scripts were called by filename (`volumecontrol.sh`, `cliphist.sh`, ...) although they are no longer in `PATH`, `hyprctl dispatch exec ...` is rejected by Hyprland's Lua config, and libinput-gestures runs commands without a shell, so `pkill rofi || ...` and trailing `# comments` were passed as arguments. The clipboard gesture also passed `c` instead of `-c`, which would have opened the main clipboard menu instead of the history
+- Keybinds: the previous-wallpaper keybind (`SUPER+ALT+Left`) passes `--previous` to `wallpaper.sh` instead of `--prev`. `--prev` only worked because getopt accepts an unambiguous prefix of a long option, and would have broken as soon as another option starting with "prev" was added
+- Waybar: several right-click menu entries did nothing because the menu item id and its `menu-actions` key didn't match, which Waybar ignores silently: HyDE menu "Previous Layout" (`waybar-layout-prev` vs `waybar-layout-previous`), dunst "Close" (`close` vs `close-all`) and the `custom/clipboard` "Delete" entry (`delete-history` vs `delete`). The macOS preset's HyDE menu was also missing the actions for Layouts, Lockscreen and all Hyprsunset entries
+- Waybar: fixed module click actions that silently did the wrong thing or nothing. `custom/wallchange` changed the wallpaper without `--global`, so it skipped the theme cache and wallbash colours that the keybinds and the HyDE menu apply; it now runs `wallpaper.sh --global` through `hyde-shell app -t scope --` like the HyDE menu, since the colour reload signals Waybar's whole cgroup (#2024). `custom/cliphist` "Manage Favorites" opened the main clipboard menu instead. `custom/cava`'s on-click had an unclosed quote and failed. `custom/swaync`'s running check (`1>2 /dev/null`) always passed and wrote to a file named `2`. `custom/gpuinfo#nvidia` called `hyde-shell app` without `--`, which runs nothing without systemd
+- Lockscreen: `hyde-shell lockscreen --select` (the Waybar HyDE menu's "Lockscreen" entry) no longer locks the screen when the configured lockscreen has no layout selector. `--select` was passed on to the lockscreen itself, which only hyprlock's wrapper understood; it now hands over to a wrapper that declares `--select` through argparse.sh, as hyprlock's does, and otherwise reports that there is none
+- Waybar: Caffeine mode no longer turns itself off when switching Waybar layouts or themes (follow-up to #2117). Waybar kills the process groups of on-click commands when a SIGUSR2 hot-reload destroys its modules, and the `systemd-inhibit` process started by `caffeine.sh` was still in that group. It now runs in its own session and, when the systemd user manager is reachable, in its own scope, so stopping or restarting the Waybar unit no longer kills it either
+- Battery Notification: use synchronous as replace id is not respected  by other daemons and remove some trash code paddings.
+- Waybar: `hyde-shell waybar --next`/`--prev` (`SUPER+ALT+Up/Down`) no longer crashes with "ValueError: '…/layouts/backup/…' is not in list" (#2133). Layout backups live in `layouts/backup/` inside a layout directory and were picked up as layouts; since `backup/…` sorts before most names, the fallback that takes the first layout or matches `config.jsonc` by hash could settle on a backup. Backups are no longer treated as layouts, cycling starts from the first or last layout when a backup applied from the backup menu is the current one, a missing state file no longer crashes it, and a home under a directory named `backup` no longer turns every layout into a backup
+- Waybar: `waybar.py` searches `/usr/local/share/waybar` and `/usr/share/waybar` for system-wide layouts, modules and includes. The entries lacked their leading `/`, so they resolved against the current directory: system-wide files were never found, and a `usr/share/waybar` tree in the directory it ran from was read instead
+- Installer: `install.sh -r` replaces Hyprland's own generated example `hyprland.lua` with HyDE's template (#2132). Hyprland writes that file when it starts with no config, e.g. after an install that failed before deploying; HyDE deploys `hyprland.lua` only when it is absent and the v26.8.1 migration merely prepended its loader, so the example kept loading on top of HyDE, resetting border colors and animations on every theme and binding `XF86AudioMute` a second time, which made the mute key toggle twice. Only a byte-for-byte untouched example (Hyprland's header plus the example the installed Hyprland ships at `<prefix>/share/hypr/hyprland.lua`, optionally behind the v26.8.1 loader) is replaced, atomically, so an interrupted or failed deploy never leaves the user without a `hyprland.lua`; a copy is kept in `~/.local/state/hyde/backup/hyprland-autogenerated/`; an edited one, or one generated by another Hyprland release, stays in place with a warning
+- Installer: `theme.switch.sh` no longer fails with "HyDE: command not found" during `install.sh -r` by sourcing `globalcontrol.sh` directly when `hyde-shell init` is unavailable
+- Dependencies: removed unreliable version constraint `hyprquery>=0.6.8.r11`. Advise users to update `yay -Sy hyprquery`.
+- Wallpaper: `theme.switch.sh` no longer hangs forever when the awww/swww daemon is running but unresponsive. The daemon health-check (`<backend> query`, and `<backend> restore` after a restart) ran as a plain foreground call with no bound, unlike the apply command it precedes; a stalled daemon left it blocking indefinitely. It is now wrapped in `timeout`, the same treatment the apply command already had.
+
+### Fixed
+- Waybar: honor an optional `$WAYBAR_LAYOUT` in `hypr.theme` during color/theme updates, selecting the layout and matching stylesheet temporarily. Restore the previous layout and independently selected CSS when leaving themes with a preset, preserving them across repeated updates and preset-to-preset switches. Fix theme setting lookup for names containing spaces such as `Mac OS`.
+- Waybar: repair the macOS preset, remove its blocking wallpaper decoder, use an accessible semantic palette, and restore spacing between HyDE menu icons and labels
+- Hyprland: prevent window borders from being clipped when snapping to monitor edges in 0-gap workflows
+- Hyprland: windows that cannot join a group, such as pyprland's dropdown terminal, get the same border colors as every other window; `general.col.nogroup_border` and `nogroup_border_active` were never set, so those windows kept Hyprland's magenta and yellow defaults whatever the theme or wallbash mode
+- Hyprland: the dropdown terminal (`SUPER + ALT + T`) no longer reappears and fades out after sliding off-screen when an animation preset is active; pyprland's `no_anim` rule for the `pypr_noanim` tag is registered at runtime and was lost on every config reload, so it is now declared in `window_rules.lua`
+- Waybar, wlogout: fix logout button behavior
+- Waybar: resolve visual collision between privacy and tray modules by adding margins
+- Docs: fix broken HyDE wiki links across the main and translated `README` files
+- Waybar: correct spacing and missing icons in window module
+- Waybar: choosing a theme, or just a wallpaper within the current theme, from the HyDE menu, the theme module, the wallpaper widget or the macOS layout's menu no longer silently leaves the wallpaper and colour state unapplied; both paths write into `hypr/themes/colors.conf`, which triggers a Hyprland autoreload, whose reload hook sends `SIGUSR2` to the whole `hyde-Hyprland-bar.service` cgroup — killing the in-flight `theme.select.sh`/`theme.switch.sh`/`wallpaper.sh` process tree along with it. These menu actions now launch them via `hyde-shell app -t scope` so they run in their own cgroup instead of waybar's.
+- Waybar: `gpuinfo` no longer floods stderr with an `awk` fatal error on every poll when a battery exposes a `power_now` attribute the firmware cannot actually read; the value is now read before it is used instead of being handed straight to `awk`
+- Installer: a fresh install no longer aborts on a missing AUR helper before having the chance to install it
+- Wallbash: resolve `integer expected` syntax error in `color.set.sh` when evaluating template failure state
+- Waybar: `gpuinfo` no longer crashes with a division-by-zero error, leaks a plain-text banner into its JSON output on the first poll after a reboot or a `--reset`, or emits an invalid `"percentage":` with no value when no temperature sensor is available; all three used to break the module's parsing
+- Python environment: `uv sync` now targets the HyDE-managed venv at `~/.local/state/hyde/python_env` instead of creating a project-local `.venv`; also forces `--link-mode copy` to avoid silent reflink failures on ext4 that left packages uninstalled
+- Hypridle: use Lua DPMS dispatchers so idle screen-off and resume work with the Hyprland Lua config parser
+- Theme import: `theme.import.py`'s fzf preview no longer crashes with an `AttributeError` when previewing a theme name that isn't in the cached gallery data
+- Theme: `theme.switch.sh` now logs `hyq`'s own error output to `~/.cache/hyde/logs/theme.switch.sh.log` when it fails to dump `hypr.theme` to Lua, instead of discarding it; the generic "could not dump hypr.theme" message previously left no way to tell why, and this runtime script has no log file at all otherwise since it never goes through install.sh's `HYDE_LOG` (#2098)
+
+## v26.08.21
+
+### Added
+- Hyprland: automatically load `monitors.lua`. `nwg-displays` now works without requiring manual imports, while still allowing users to override them in `hyprland.lua`.
+- Docs: `MIGRATION-LUA.md`, a transition guide for upgrading from the hyprlang configuration — what moved where, the silent failures and their causes, and the files the upgrade leaves behind
+- swaync: notification popup padding, control center margin, and corner rounding follow the active theme's `general:gaps_out` and `decoration:rounding`
+
+### Removed
+- Hyprland: dropped the legacy hyprlang dot, the files it deployed no longer exist
+
+### Fixed
+- Waybar: resolved an issue in the memory module where state-specific formats overrode `format-alt` when memory usage exceeded 30%.
+- Waybar: enforced decimal rounding for values in the memory module
+- Hyprland: restored missing background blur on UI layers (Waybar, Rofi, etc.)
+- Core: `keyboardswitch.sh` triggers correct language notification; layout switch targets current device instead of cycling all devices, eliminating the IPC race condition and preventing multiple input devices from desyncing
+- Rofi selector: the launcher grid is sized from the display again when the focused-monitor query comes back empty, instead of collapsing to a single column; the width had no fallback while the other two selectors both default to 1920
+- Waybar: the theme picker opens again from the theme module, the HyDE menu and the macOS layout's menu; all three called `themeselect`, which the v26.7.4 migration renamed to `theme.select`
+- Hyprlock: the lock screen comes up with its layout again instead of a black screen; the directory holding the shipped layouts was left behind by the move to the dot metafiles, so the selector listed nothing, `$LAYOUT_PATH` pointed at a file that was never deployed, and wallbash skipped the template rather than create the directory
+- Hyprland: the shader selector offers the shipped shaders again, and the colors wallbash writes for the lock screen have somewhere to land; both directories stopped being deployed when the installer moved off the restore list
+- wlogout: the menu is drawn with the HyDE layouts, icons and styles again instead of the upstream defaults
+- Notifications: an install brings a notification daemon again; `dunst` and the configuration it reads were left in a group the installer never loads, so nothing served notifications and every wallbash pass reported a missing directory for a dot that was never deployed
+- Core: an install no longer leaves the whole core package set uninstalled because one name is missing from the Arch repositories; `wlogout` and `libinput-gestures` are asked of an AUR helper, which is where they live, instead of pacman, which installs a dependency block with a single command and aborts all of it on a name it cannot resolve
+- Core: the dependency steps install the packages they were given again; the configs the installer writes at run time declared their group include at the document root, where deez does not read it, so both steps resolved an empty set, installed nothing but the machine-specific packages, and reported the packages verified
+- Hyprland: rofi style selector keybind now correctly opens style menu instead of the default application launcher
+- Hyprland: a session started without `HYPRLAND_CONFIG`, from a TTY or a display manager, no longer trips emergency mode with `module 'lua.hyde.path' not found`; the entry point resolves the modules shipped beside it from its own path
+- Fish: `~/.local/bin` reaches `PATH` again, so `hyde-shell` and everything the keybinds call resolve in a fish session; the directory was handed to `fish_add_path` joined to the rest of `PATH` by colons, which is one path that exists nowhere and is dropped without a word
+- Weather Applet: Avoid crashes from unknown weather codes or unavailable wttr.in responses.
+- Core: an install no longer ends at the Lua step on a machine that cannot build `lgi`; the introspection headers it compiles against are declared as a dependency, and an optional rock that still fails is reported and skipped instead of taking the run down before any dotfile is deployed
+- Hyprland: a session on a machine with a discrete NVIDIA GPU no longer comes up with a timed-out configuration; driver detection reads `/proc` and `/sys`, and the library directories are found by opening the candidate paths, so the budget Hyprland allows the whole configuration is no longer spent waiting on a subprocess
+- Core: an install deploys the cursor dots again instead of aborting on an existing theme file; the locked `deez-dots` revision predated the extraction fix, so every install kept running the defect the fix had already closed
+- Core: Pyprland commands keep their arguments when `nc`, `socat`, and `ncat` are unavailable, so commands such as `hyde-shell pypr toggle console` work through the CLI fallback again
+- Hyprland: a session started without `XDG_CONFIG_HOME`, such as one launched from a TTY, no longer dies with a Lua error before the first window; the unset variable is treated as unset instead of being pasted into a path
+- Hyprland: a home directory containing an apostrophe no longer makes the session load its libraries from the system directory instead of the user's own, and an empty `XDG_RUNTIME_DIR` reads as unset rather than resolving against the working directory
+- Waybar: the theme module and the HyDE menu call `theme.switch` again; `themeswitch` was removed and the calls failed outright
+- Dolphin: the "Set As Wallpaper" service menu switches the theme again
+- Fish: `HYPRLAND_CONFIG` points at the deployed `hypr/hyde.lua` instead of a config the Lua release deleted, so a session started outside uwsm no longer comes up without a config
+- Hyprland: the config editor offers the user's `hypr/hyprland.lua` instead of four files nothing reads, which it used to create empty on save
+- System monitor: a console monitor no longer launches with no terminal attached, and `[sysmonitor] terminal` is a real setting
+- Docs: the keybinding reference describes the Lua configuration instead of the removed `userprefs.conf`, documents binds that were missing from it, corrects four descriptions that no longer matched the code, and explains why an override needs the original bind's flags
+- Docs: the shipped `hypr/hyprland.lua` stub shows a working bind instead of pointing at a wiki that does not exist
+- Docs: the keybinding links in the German, Arabic, French, Dutch and Turkish readmes resolve again
+- Core: every migration that has not been applied yet now runs in version order and is recorded, instead of only the newest one running and retiring the rest unseen
+- Core: app launchers no longer show a false error when an unrelated `DEBUG` variable contains a non-boolean value such as `release`
+- Desktop: the generated battery notification startup command now launches `batterynotify.lua` instead of the removed shell implementation
+- Hyprland: Lua keybinds again match the documented shortcuts for window management, screenshots, wallpapers, Waybar, selectors, workspaces and the scratchpad
+- Screenshot: area capture now uses the fixed upstream Grimblast selector instead of prompting for the region twice; the dot carried no version of its own, so existing installs kept resolving to the default and never re-synced
+- Screenshot: Satty defaults to the compatible GTK GL renderer when no explicit `GSK_RENDERER` is configured
+- Screenshot: the "print all monitors" keybind now invokes a full-output capture instead of capturing only the focused monitor
+- Waybar `hyprland/workspaces` module adapted to use lua dispatchers
+- Hyprland: `Super + Ctrl + arrows` no longer changes the group and the workspace at the same time.
+  Group navigation uses `Super + Ctrl + H/L`
+- Hyprland: the right Control key no longer hides Waybar on its own. Hiding moved to `Super + Ctrl + B`
+- Hyprland: workspaces 11-20 on the numpad respond again
+- OCR: the language list in the result notification is no longer split across arguments
+- Wallpaper: the duplicate check in the kon backend compares against the whole hash list again
+- Repo: dropped two stray gitlinks that made `git submodule` fail on a fresh clone
+- Waydeeper: drop unsupported `--inpaint` option and inpaint model, use `--3d` instead
+- swaync: use themes from the `.local/share/wallbash` template instead of a stale copy that permanently shadowed it
+- swaync: an install deploys `~/.config/swaync` again; its dot lived only in `notification-daemon.toml`, a group nothing includes, so nothing ever reached it
+
+## v26.7.4 | 4th Week of July 2026 Release
+
+**Alright** Looks like hyprland 0.56.1 warns user to use lua so here you go!
+
+Run `install.sh -r` to update.
+
+Please report and try to fix any bugs. Thank you!
+Life is tight as of the moment. Any help will do. 💓
+
+
+### Added
+- GTK: hyde will have our own dconf db called 'hyde_hyprland'. That means dconf settings are isolated for HyDE Hyprland ONLY
+- Hyprland: Added 'hyde-shell layouts --select' to select hyprland layouts from default or custom layouts.
+  Add your custom layout modifications to '~/.config/hypr/lua/layouts/custom.lua'
+
+
+### Changed
+
+- Hyprland: Use lua for all its config
+- Hyprland: Deprecate old hyprlang configs
+- Core: Added lua and luarocks dependencies
+- Core: Convert some script to lua
+- Hyprland: Removed '[hyprland-start]'. Use 'desktop.start' instead.
+- Desktop: Added 'desktop.start' to handle startup commands.
+- Core: Some config changes in '~/.config/hyde/config.toml', Please see the schema for more info.
+- Hyprland: Drop of hyprlang support
+- GTK: Have a separate 'DCONF_PROFILE' for GTK apps! For QT, twas always handled by qt6ct and should not
+    mangle with QT. But KDE apps uses ~/.config/kdeglobals which might break KDE apps for multi DE. (No fix for now)
+
+
+### Fixed
+- Fix cantarell font
+- Some minor bugs
+
 ## v26.4.5 | End of April Release
 
 ### Changed

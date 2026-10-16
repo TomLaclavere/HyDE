@@ -1,0 +1,39 @@
+# Fichiers perso (TomLaclavere), absents de HyDE upstream.
+[perso]
+description = "personal dotfiles"
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.config/hypr"
+target_root = "${XDG_CONFIG_HOME}/hypr"
+paths = ["monitors.lua"]
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.config/waybar"
+target_root = "${XDG_CONFIG_HOME}/waybar"
+paths = ["layouts/perso.jsonc", "scripts"]
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.config/hyde/themes/Dracula"
+target_root = "${XDG_CONFIG_HOME}/hyde/themes/Dracula"
+paths = ["wallpapers"]
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.config/micro"
+target_root = "${XDG_CONFIG_HOME}/micro"
+paths = ["settings.json", "bindings.json", "colorschemes"]
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.local/bin"
+target_root = "${HOME}/.local/bin"
+paths = ["toggle-laser-cursor.sh"]
+
+[[perso.files]]
+action = "preserve"
+source_root = "Configs/.icons"
+target_root = "${HOME}/.icons"
+paths = ["RedDot"]

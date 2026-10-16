@@ -288,49 +288,52 @@ generate_json() {
   echo "${json}"
 }
 
-general_query() { # Function to get temperature from 'sensors'
-  filter=''
-  sensors_data=$(sensors 2>/dev/null)
-  temperature=$(echo "${sensors_data}" | ${filter} grep -m 1 -E "(edge|Package id.*|another keyword)" | awk -F ':' '{print int($2)}') #! We can get json data from sensors too
-  fan_speed=$(echo "${sensors_data}" | ${filter} grep -m 1 -E "fan[1-9]" | awk -F ':' '{print int($2)}')
-
-  # gpu_load=$()
-  # core_clock=$()
-  for file in /sys/class/power_supply/BAT*/power_now; do
-    [[ -f "${file}" ]] && power_discharge=$(awk '{print $1*10^-6 ""}' "${file}") && break
-  done
-  [[ -z "${power_discharge}" ]] && for file in /sys/class/power_supply/BAT*/current_now; do
-    [[ -e "${file}" ]] && power_discharge=$(awk -v current="$(cat "${file}")" -v voltage="$(cat "${file/current_now/voltage_now}")" 'BEGIN {print (current * voltage) / 10^12 ""}') && break
-  done
-  # power_limit=$()
-  # Get CPU stat
-  get_utilization() {
-    # Get initial CPU stat
-    statFile=$(head -1 /proc/stat)
-    if [[ -z "$GPUINFO_PREV_STAT" ]]; then
-      GPUINFO_PREV_STAT=$(awk '{print $2+$3+$4+$6+$7+$8 }' <<<"$statFile")
-      echo "GPUINFO_PREV_STAT=\"$GPUINFO_PREV_STAT\"" >>"${gpuinfo_file}"
-    fi
-    if [[ -z "$GPUINFO_PREV_IDLE" ]]; then
-      GPUINFO_PREV_IDLE=$(awk '{print $5 }' <<<"$statFile")
-      echo "GPUINFO_PREV_IDLE=\"$GPUINFO_PREV_IDLE\"" >>"${gpuinfo_file}"
-    fi
-    currStat=$(awk '{print $2+$3+$4+$6+$7+$8 }' <<<"$statFile")
-    currIdle=$(awk '{print $5 }' <<<"$statFile")
-    diffStat=$((currStat - GPUINFO_PREV_STAT))
-    diffIdle=$((currIdle - GPUINFO_PREV_IDLE))
-
-    # Store state and sleep
-    GPUINFO_PREV_STAT=$currStat
-    GPUINFO_PREV_IDLE=$currIdle
-
-    # Save the current state to the file
-    sed -i -e "/^GPUINFO_PREV_STAT=/c\GPUINFO_PREV_STAT=\"$currStat\"" -e "/^GPUINFO_PREV_IDLE=/c\GPUINFO_PREV_IDLE=\"$currIdle\"" "$gpuinfo_file" || {
-      echo "GPUINFO_PREV_STAT=\"$currStat\"" >>"$cpuinfo_file"
-      echo "GPUINFO_PREV_IDLE=\"$currIdle\"" >>"$cpuinfo_file"
+general_query() {
+    filter=''
+    sensors_data=$(sensors 2>/dev/null)
+    # "edge" is amdgpu's GPU temp, "Package id.*" is Intel CPU package temp.
+    # Some AMD CPUs expose temperature via k10temp/zenpower with labels "Tctl"/"Tdie";
+    # without matching those, `temperature` can be empty on such systems (#1952).
+    temperature=$(echo "$sensors_data" | $filter grep -E "(edge|Package id.*|Tctl|Tdie)" | awk -F ':' '$2 ~ /^[[:space:]]*[+-]?[0-9]/ {print int($2); exit}')
+    fan_speed=$(echo "$sensors_data" | $filter grep -m 1 -E "fan[1-9]" | awk -F ':' '{print int($2)}')
+    local power_supply_dir="${GPUINFO_POWER_SUPPLY_DIR:-/sys/class/power_supply}"
+    local power_raw current_raw voltage_raw
+    # These attributes can exist and still fail to read — some laptops expose
+    # power_now but have their EC answer ENXIO for it — so read the value
+    # first and only use it if we actually got one. Letting awk open the file
+    # itself turns that into a fatal error on every poll.
+    for file in "$power_supply_dir"/BAT*/power_now; do
+        [[ -f $file ]] && power_raw=$(cat "$file" 2>/dev/null) && [[ -n $power_raw ]] &&
+            power_discharge=$(awk -v power="$power_raw" 'BEGIN {print power*10^-6 ""}') && break
+    done
+    [[ -z $power_discharge ]] && for file in "$power_supply_dir"/BAT*/current_now; do
+        [[ -e $file ]] && current_raw=$(cat "$file" 2>/dev/null) &&
+            voltage_raw=$(cat "${file/current_now/voltage_now}" 2>/dev/null) &&
+            [[ -n $current_raw && -n $voltage_raw ]] &&
+            power_discharge=$(awk -v current="$current_raw" -v voltage="$voltage_raw" 'BEGIN {print (current * voltage) / 10^12 ""}') && break
+    done
+    get_utilization() {
+        statFile=$(head -1 /proc/stat)
+        if [[ -z $GPUINFO_PREV_STAT ]]; then
+            GPUINFO_PREV_STAT=$(awk '{print $2+$3+$4+$6+$7+$8 }' <<<"$statFile")
+            echo "GPUINFO_PREV_STAT=\"$GPUINFO_PREV_STAT\"" >>"$gpuinfo_file"
+        fi
+        if [[ -z $GPUINFO_PREV_IDLE ]]; then
+            GPUINFO_PREV_IDLE=$(awk '{print $5 }' <<<"$statFile")
+            echo "GPUINFO_PREV_IDLE=\"$GPUINFO_PREV_IDLE\"" >>"$gpuinfo_file"
+        fi
+        currStat=$(awk '{print $2+$3+$4+$6+$7+$8 }' <<<"$statFile")
+        currIdle=$(awk '{print $5 }' <<<"$statFile")
+        diffStat=$((currStat - GPUINFO_PREV_STAT))
+        diffIdle=$((currIdle - GPUINFO_PREV_IDLE))
+        GPUINFO_PREV_STAT=$currStat
+        GPUINFO_PREV_IDLE=$currIdle
+        sed -i -e "/^GPUINFO_PREV_STAT=/c\GPUINFO_PREV_STAT=\"$currStat\"" -e "/^GPUINFO_PREV_IDLE=/c\GPUINFO_PREV_IDLE=\"$currIdle\"" "$gpuinfo_file" || {
+            echo "GPUINFO_PREV_STAT=\"$currStat\"" >>"$cpuinfo_file"
+            echo "GPUINFO_PREV_IDLE=\"$currIdle\"" >>"$cpuinfo_file"
     }
 
-    awk -v stat="$diffStat" -v idle="$diffIdle" 'BEGIN {printf "%.1f", (stat/(stat+idle))*100}'
+    awk -v stat="$diffStat" -v idle="$diffIdle" 'BEGIN {total=stat+idle; printf "%.1f", (total > 0 ? (stat/total)*100 : 0)}'
   }
 
   # Get dynamic CPU information
@@ -371,25 +374,21 @@ nvidia_GPU() { #? Function to query Nvidia GPU
   power_limit="${gpu_data[5]// /}"
 }
 
-amd_GPU() { #? Function to query amd GPU
-  primary_gpu="AMD ${GPUINFO_AMD_GPU}"
-  # Execute the AMD GPU Python script and use its output
-  amd_output=$(python3 ${scrDir}/amdgpu.py)
-  if [[ ! ${amd_output} == *"No AMD GPUs detected."* ]] && [[ ! ${amd_output} == *"Unknown query failure"* ]]; then
-    # Extract GPU Temperature, GPU Load, GPU Core Clock, and GPU Power Usage from amd_output
-    temperature=$(echo "${amd_output}" | jq -r '.["GPU Temperature"]' | sed 's/°C//')
-    utilization=$(echo "${amd_output}" | jq -r '.["GPU Load"]' | sed 's/%//')
-    core_clock=$(echo "${amd_output}" | jq -r '.["GPU Core Clock"]' | sed 's/ GHz//;s/ MHz//')
-    power_usage=$(echo "${amd_output}" | jq -r '.["GPU Power Usage"]' | sed 's/ Watts//')
-
-  else
-    general_query
-  fi
+amd_GPU() {
+    primary_gpu="AMD $GPUINFO_AMD_GPU"
+    amd_output=$("${XDG_STATE_HOME:-$HOME/.local/state}/hyde/python_env/bin/python" "$scrDir/amdgpu.py")
+    if [[ -n $amd_output ]] && [[ $amd_output != *"No AMD GPUs detected."* ]] && [[ $amd_output != *"Unknown query failure"* ]]; then
+        temperature=$(echo "$amd_output" | jq -r '.["GPU Temperature"]' | sed 's/°C//')
+        utilization=$(echo "$amd_output" | jq -r '.["GPU Load"]' | sed 's/%//')
+        core_clock=$(echo "$amd_output" | jq -r '.["GPU Core Clock"]' | sed 's/ GHz//;s/ MHz//')
+        power_usage=$(echo "$amd_output" | jq -r '.["GPU Power Usage"]' | sed 's/ Watts//')
+    else
+        general_query
+    fi
 }
-
-if [[ ! -f "${gpuinfo_file}" ]]; then
-  query
-  echo -e "Initialized Variable:\n$(cat "${gpuinfo_file}")\n\nReboot or '$0 --reset' to RESET Variables"
+if [[ ! -f $gpuinfo_file ]]; then
+    query
+    echo -e "Initialized Variable:\n$(cat "$gpuinfo_file")\n\nReboot or '$0 --reset' to RESET Variables" >&2
 fi
 source "${gpuinfo_file}"
 
@@ -403,11 +402,11 @@ case "$1" in
   toggle "$2"
   ;;
 "--reset" | "-rf")
-  rm -fr "${gpuinfo_file}"*
-  query
-  echo -e "Initialized Variable:\n$(cat "${gpuinfo_file}" || true)\n\nReboot or '$0 --reset' to RESET Variables"
-  exit
-  ;;
+    rm -fr "$gpuinfo_file"*
+    query
+    echo -e "Initialized Variable:\n$(cat "$gpuinfo_file" || true)\n\nReboot or '$0 --reset' to RESET Variables" >&2
+    exit
+    ;;
 "--stat")
   case "$2" in
   "amd")

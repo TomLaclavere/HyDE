@@ -26,7 +26,7 @@ Multi-language README support
   <a href="#updaten"><kbd> <br> Updaten <br> </kbd></a>&ensp;&ensp;
   <a href="#thema's"><kbd> <br> Thema's <br> </kbd></a>&ensp;&ensp;
   <a href="#stijlen"><kbd> <br> Stijlen <br> </kbd></a>&ensp;&ensp;
-  <a href="KEYBINDINGS.nl.md"><kbd> <br> Toetscombinaties <br> </kbd></a>&ensp;&ensp;
+  <a href="../assets/keybinds/KEYBINDINGS.nl.md"><kbd> <br> Toetscombinaties <br> </kbd></a>&ensp;&ensp;
   <a href="https://www.youtube.com/watch?v=2rWqdKU1vu8&list=PLt8rU_ebLsc5yEHUVsAQTqokIBMtx3RFY&index=1"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
   <a href="https://hydeproject.pages.dev/"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
   <a href="https://discord.gg/qWehcFJxPa"><kbd> <br> Discord <br> </kbd></a>
@@ -86,7 +86,7 @@ cd ~/HyDE/Scripts
 > Baseer je lijst op basis van `Scripts/pkg_extra.lst`
 > of je kunt `cp  Scripts/pkg_extra.lst Scripts/pkg_user.lst` Als je alle extra pakketten wilt installeren.
 
-Start je systeem opnieuw op na het installatiescript klaar is en je voor de eerste keer naar het SDDM inlogscherm (of zwart scherm) brengt. Voor meer details, raadpleeg de [installatie wiki](https://github.com/HyDE-Project/HyDE/wiki/installation).
+Start je systeem opnieuw op na het installatiescript klaar is en je voor de eerste keer naar het SDDM inlogscherm (of zwart scherm) brengt. Voor meer details, raadpleeg de [installatie wiki](https://hydeproject.pages.dev/en/getting-started/installation).
 
 <div align="right">
   <br>

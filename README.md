@@ -14,12 +14,14 @@
 > pacman -S --needed git base-devel
 > git clone https://github.com/TomLaclavere/HyDE ~/HyDE
 > cd ~/HyDE/Scripts
-> ./install.sh pkg_perso.lst
+> ./install.sh
+> ./install_pkg.sh pkg_perso.lst
 > ```
 >
 > - `Scripts/pkg_perso.lst` : paquets perso installés en plus de HyDE.
 > - `Scripts/themepatcher.lst` : ajoute le thème Dracula (thème actif).
-> - Configs perso : Hyprland (`userprefs.conf`, `monitors.conf`, keybinds), zsh, waybar (layout `perso`), fastfetch, VS Code, micro, curseur laser (`Super+Shift+L`).
+> - `Scripts/dots/perso.toml` : déploie les fichiers perso (layout waybar `perso`, `monitors.lua`, fonds d'écran Dracula, micro, curseur laser).
+> - Réglages Hyprland perso : `Configs/.config/hypr/hyprland.lua` (clavier fr, gaps, thème GTK, raccourcis).
 > - Flatpaks (optionnel) : `Scripts/extra/install_fpk.sh`.
 > - Le thème actif se choisit après l'installation avec `Super+Shift+T` → Dracula.
 
@@ -91,12 +93,17 @@ While installing HyDE alongside another [DE](https://wiki.archlinux.org/title/De
 For NixOS support there is a separate project being maintained @ [Hydenix](https://github.com/richen604/hydenix/tree/main)
 
 > [!IMPORTANT]
-> The install script will auto-detect an NVIDIA card and install nvidia-open-dkms drivers for your kernel.
-> For legacy cards [check this first](./Scripts/nvidia-db/)
-> Please ensure that your NVIDIA card supports dkms drivers in the list provided [here](https://wiki.archlinux.org/title/NVIDIA).
+> The install script will auto-detect an NVIDIA card and install a matching DKMS driver path for your kernel.
+> Newer cards may use `nvidia-dkms` / `nvidia-open-dkms`, while legacy cards should be checked first against [`Scripts/nvidia-db/`](./Scripts/nvidia-db/).
+> Please ensure that your NVIDIA card supports the DKMS driver family selected for it in the list provided [here](https://wiki.archlinux.org/title/NVIDIA).
+>
+> If a DKMS package is selected, expect a local module build for the current kernel during installation. This can take several minutes and may happen even when an NVIDIA DKMS package was already installed, because DKMS rebuilds modules for the active kernel.
 
 > [!CAUTION]
 > The script modifies your `grub` or `systemd-boot` config to enable NVIDIA DRM.
+
+> [!TIP]
+> BigLinux / Manjaro users may want to take a snapshot with Timeshift before running the installer, especially when HyDE is being installed alongside an existing desktop environment. On older NVIDIA cards, review the legacy driver list in [`Scripts/nvidia-db/`](./Scripts/nvidia-db/) before continuing.
 
 To install, execute the following commands:
 
@@ -125,7 +132,15 @@ View installation instructions for HyDE in [Hyde-cli - Usage](https://github.com
 -->
 
 Please reboot after the install script completes and takes you to the SDDM login screen (or black screen) for the first time.
-For more details, please refer to the [installation wiki](https://github.com/HyDE-Project/HyDE/wiki/installation).
+For more details, please refer to the [installation wiki](https://hydeproject.pages.dev/en/getting-started/installation).
+
+Quick checklist for Arch-based distros such as BigLinux / Manjaro:
+
+- Create a restore point (for example with Timeshift) before running `install.sh`.
+- Expect changes to GRUB, SDDM, and `/etc/pacman.conf` during installation.
+- If your GPU is an older NVIDIA model, verify whether it belongs to a legacy dkms series before accepting the default driver path.
+- If a `*-dkms` NVIDIA package is selected, expect a local module build for the current kernel during install; this can take a while even if the package was already installed previously.
+- Reboot after the installer finishes, then select the Hyprland / HyDE session from the display manager.
 
 <div align="right">
   <br>
@@ -160,6 +175,9 @@ Whether you're helping with code, testing, or documentation, we appreciate your 
 <img src="https://readme-typing-svg.herokuapp.com?font=Lexend+Giga&size=25&pause=1000&color=CCA9DD&vCenter=true&width=435&height=25&lines=UPDATING" width="450"/>
 
 ---
+
+> [!NOTE]
+> If you are upgrading from an older version to the new Lua configuration, please follow the [Lua Migration Guide](https://hydeproject.pages.dev/en/help/lua/) in the HyDE wiki.
 
 To update HyDE, you will need to pull the latest changes from GitHub and restore the configs by running the following commands:
 

@@ -29,7 +29,7 @@ Support multilingue pour le README
 <a href="#update"><kbd> <br> Mise à jour <br> </kbd></a>&ensp;&ensp;
 <a href="#themes"><kbd> <br> Thèmes <br> </kbd></a>&ensp;&ensp;
 <a href="#styles"><kbd> <br> Styles <br> </kbd></a>&ensp;&ensp;
-<a href="KEYBINDINGS.fr.md"><kbd> <br> Raccourcis <br> </kbd></a>&ensp;&ensp;
+<a href="../assets/keybinds/KEYBINDINGS.fr.md"><kbd> <br> Raccourcis <br> </kbd></a>&ensp;&ensp;
 <a href="https://www.youtube.com/watch?v=2rWqdKU1vu8&list=PLt8rU_ebLsc5yEHUVsAQTqokIBMtx3RFY&index=1"><kbd> <br> YouTube <br> </kbd></a>&ensp;&ensp;
 <a href="https://hydeproject.pages.dev/"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
 <a href="https://discord.gg/qWehcFJxPa"><kbd> <br> Discord <br> </kbd></a>
@@ -101,7 +101,7 @@ Voir les instructions d'installation pour HyDE dans [Hyde-cli - Usage](https://g
 -->
 
 Veuillez redémarrer après que le script d'installation se termine et vous amène à l'écran de connexion SDDM (ou écran noir) pour la première fois.
-Pour plus de détails, veuillez consulter le [wiki d'installation](https://github.com/HyDE-Project/HyDE/wiki/installation).
+Pour plus de détails, veuillez consulter le [wiki d'installation](https://hydeproject.pages.dev/fr/getting-started/installation).
 
 <div align="right">
   <br>

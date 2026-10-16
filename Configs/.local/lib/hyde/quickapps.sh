@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 scrDir=$(dirname "$(realpath "$0")")
 scrDir="${scrDir:-$HOME/.local/lib/hyde}"
-source $scrDir/globalcontrol.sh
+source "$scrDir/globalcontrol.sh"
 confDir=${confDir:-$XDG_CONFIG_HOME}
 rofi_config="$confDir/rofi/quickapps.rasi"
 if [ $# -eq 0 ]; then
@@ -72,7 +72,7 @@ else
     appDir=/usr/share/applications
 fi
 RofiSel=$(for qApp in "$@"; do
-    Lkp=$(grep "$qApp" $appDir/* | grep 'Exec=' | awk -F ':' '{print $1}' | head -1)
+    Lkp=$(grep -F "$qApp" "$appDir"/* | grep 'Exec=' | awk -F ':' '{print $1}' | head -1)
     Ico=$(grep 'Icon=' "$Lkp" | awk -F '=' '{print $2}' | head -1)
     echo -en "$qApp\x00icon\x1f$Ico\n"
 done | rofi -no-fixed-num-lines -dmenu \

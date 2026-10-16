@@ -2,7 +2,7 @@
 
 # shellcheck source=$HOME/.local/bin/hyde-shell
 # shellcheck disable=SC1091
-if ! source "$(which hyde-shell)"; then
+if ! source "$(command -v hyde-shell)"; then
   echo "[wallbash] code :: Error: hyde-shell not found."
   echo "[wallbash] code :: Is HyDE installed?"
   exit 1
@@ -47,7 +47,7 @@ icon_theme = "${gtkIcon},${allIcons}"
 
 # [Type-2]
 # appname = "HyDE Notify"
-# format = "<span size="250%">%s</span>\n%b"
+# format = "<span size='250%%'>%s</span>\n%b"
 
 [Type-1]
 appname = "HyDE Alert"
@@ -55,7 +55,7 @@ format = "<b>%s</b>"
 
 [Type-2]
 appname = "HyDE Notify"
-format = "<span size="250%">%s</span>\n%b"
+format = "<span size='250%%'>%s</span>\n%b"
 
 
 

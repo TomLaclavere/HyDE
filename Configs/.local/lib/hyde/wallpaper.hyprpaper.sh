@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 [[ $HYDE_SHELL_INIT -ne 1 ]] && eval "$(hyde-shell init)"
 
+wallpaper_acquire_lock 15
+trap 'flock -u "$WALLPAPER_LOCK_FD"' EXIT
+
 if [[ ! -f "$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprpaper.lock" ]]; then
     systemctl --user start hyprpaper.service || setsid hyprpaper &
     sleep 1
@@ -29,7 +32,7 @@ EOF
     if systemctl --user is-active --quiet hyprpaper.service; then
         systemctl --user restart hyprpaper.service
     else
-        app2unit.sh -- hyprpaper --config "$XDG_STATE_HOME/hyde/hyprpaper.conf"
+        app.sh -- hyprpaper --config "$XDG_STATE_HOME/hyde/hyprpaper.conf"
     fi
 
 fi

@@ -40,19 +40,23 @@ EOF
 }
 load_hypr_variables() {
     local hypr_file="$1"
-    eval "$(hyq "$hypr_file" \
-        --export env \
-        -Q '$GTK_THEME[string]' \
-        -Q '$ICON_THEME[string]' \
-        -Q '$CURSOR_THEME[string]' \
-        -Q '$CURSOR_SIZE[int]' \
-        -Q '$FONT[string]' \
-        -Q '$FONT_SIZE[int]' \
-        -Q '$FONT_STYLE[string]' \
-        -Q '$DOCUMENT_FONT[string]' \
-        -Q '$DOCUMENT_FONT_SIZE[int]' \
-        -Q '$MONOSPACE_FONT[string]' \
-        -Q '$MONOSPACE_FONT_SIZE[int]')"
+    # Each value is queried on its own and assigned as data. hyq's `--export
+    # env` output does not escape `$(...)`, backticks or quotes, so evaluating
+    # it ran whatever a downloaded theme's hypr.theme contained (CWE-78).
+    # Like the export, a variable the file does not define ends up empty.
+    # Everything is queried as a string: an `[int]` hint makes hyq fail on a
+    # `$VAR = 24` variable, and the value is only ever used as text here.
+    local name value
+    for name in GTK_THEME ICON_THEME CURSOR_THEME CURSOR_SIZE FONT FONT_SIZE \
+        FONT_STYLE DOCUMENT_FONT DOCUMENT_FONT_SIZE MONOSPACE_FONT \
+        MONOSPACE_FONT_SIZE; do
+        value=$(hyq "$hypr_file" -Q "\$${name}[string]" 2>/dev/null)
+        # Sizes are spliced into sed commands and config files below, where
+        # anything but a plain integer (a newline, `/`, `&`) changes their
+        # meaning: treat such a value as not set.
+        [[ ${name} == *_SIZE && ! ${value} =~ ^[0-9]*$ ]] && value=
+        printf -v "__$name" '%s' "${value}"
+    done
     GTK_THEME=${__GTK_THEME:-$GTK_THEME}
     ICON_THEME=${__ICON_THEME:-$ICON_THEME}
     CURSOR_THEME=${__CURSOR_THEME:-$CURSOR_THEME}
@@ -68,29 +72,6 @@ load_hypr_variables() {
     BAR_FONT=${__BAR_FONT:-$BAR_FONT}
     MENU_FONT=${__MENU_FONT:-$MENU_FONT}
     NOTIFICATION_FONT=${__NOTIFICATION_FONT:-$NOTIFICATION_FONT}
-}
-sanitize_hypr_theme() {
-    input_file="$1"
-    output_file="$2"
-    buffer_file="$(mktemp)"
-    sed '1d' "$input_file" >"$buffer_file"
-    dirty_regex=(
-        "^ *exec"
-        "^ *decoration[^:]*: *drop_shadow"
-        "^ *drop_shadow"
-        "^ *decoration[^:]*: *shadow *="
-        "^ *decoration[^:]*: *col.shadow* *="
-        "^ *shadow_"
-        "^ *col.shadow*")
-    dirty_regex+=("${HYPR_CONFIG_SANITIZE[@]}")
-    for pattern in "${dirty_regex[@]}"; do
-        grep -E "$pattern" "$buffer_file" | while read -r line; do
-            sed -i "\|$line|d" "$buffer_file"
-            print_log -sec "theme" -warn "sanitize" "$line"
-        done
-    done
-    cat "$buffer_file" >"$output_file"
-    rm -f "$buffer_file"
 }
 quiet=false
 while getopts "qnps:" option; do
@@ -124,10 +105,42 @@ export reload_flag=1
 source "$LIB_DIR/hyde/globalcontrol.sh"
 source "$SHARE_DIR/hyde/env-theme"
 if [[ -r $HYPRLAND_CONFIG ]]; then
-    [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]] && hyprctl keyword misc:disable_autoreload 1 -q
-    [[ -r "$HYDE_THEME_DIR/hypr.theme" ]] && sanitize_hypr_theme "$HYDE_THEME_DIR/hypr.theme" "$XDG_CONFIG_HOME/hypr/themes/theme.conf"
-    load_hypr_variables "$HYDE_THEME_DIR/hypr.theme"
-    load_hypr_variables "${XDG_STATE_DIR:-$HOME/.local/state}/hyde/hyprland.conf"
+    if [[ -n $HYPRLAND_INSTANCE_SIGNATURE ]]; then
+        hyprctl eval 'hl.config({misc = {disable_autoreload = true}})'
+    fi
+    if [[ -r "$HYDE_THEME_DIR/hypr.theme" ]]; then
+        print_log -sec "theme" -stat "dump" "hypr.theme to lua"
+        theme_state="$XDG_STATE_HOME/hyde/lua_state/hypr_theme.lua"
+        theme_buffer="$(mktemp)"
+        theme_dump_err="$(mktemp)"
+        if hyq --dump "$HYDE_THEME_DIR/hypr.theme" --schema "$XDG_DATA_HOME/hypr/schema/hyprland-lua.json" --export lua >"$theme_buffer" 2>"$theme_dump_err" &&
+            [ -s "$theme_buffer" ] &&
+            mv "$theme_buffer" "$theme_state"; then
+            rm -f "$theme_dump_err"
+        else
+            rm -f "$theme_buffer"
+            print_log -sec "theme" -crit "error" "could not dump hypr.theme, $theme_state keeps the previous theme"
+            [ -s "$theme_dump_err" ] && print_log -sec "theme" -r "$(cat "$theme_dump_err")"
+            # theme.switch.sh runs at session runtime (hyde-shell reload, the
+            # theme menu, ...), where print_log only writes to the terminal --
+            # there is no HYDE_LOG here, that only exists inside install.sh.
+            # hyq's own stderr is the only thing that says *why* the dump
+            # failed (missing binary, an outdated hyq/hyprquery predating
+            # --dump/--schema/--export, a bad schema, ...), and without a file
+            # it is gone the moment the terminal scrolls, see HyDE#2098.
+            theme_dump_log="$cacheDir/logs/theme.switch.sh.log"
+            mkdir -p "$(dirname "$theme_dump_log")"
+            {
+                printf '%s :: could not dump hypr.theme, %s keeps the previous theme\n' \
+                    "$(date -Iseconds)" "$theme_state"
+                [ -s "$theme_dump_err" ] && cat "$theme_dump_err"
+            } >>"$theme_dump_log"
+            rm -f "$theme_dump_err"
+            exit 1
+        fi
+    fi
+    load_hypr_variables "$HYDE_THEME_DIR/hypr.theme"                               # ? loads the theme vars
+    load_hypr_variables "${XDG_STATE_HOME:-$HOME/.local/state}/hyde/hyprland.conf" # ? loads the parsable user config vars, should override theme vars
 fi
 show_theme_status
 if ! dconf write /org/gnome/desktop/interface/icon-theme "'$ICON_THEME'"; then
@@ -191,7 +204,7 @@ if pkg_installed flatpak; then
         --filesystem="$HOME/.local/share/icons" \
         --env=GTK_THEME="$gtk4Theme" \
         --env=ICON_THEME="$ICON_THEME"
-    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo &
+    flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 fi
 sed -i -e "/^Net\/ThemeName /c\Net\/ThemeName \"$GTK_THEME\"" \
     -e "/^Net\/IconThemeName /c\Net\/IconThemeName \"$ICON_THEME\"" \
@@ -208,7 +221,7 @@ if [ -f "$HOME/.Xresources" ]; then
     sed -i -e "/^Xcursor\.theme:/c\Xcursor.theme: $CURSOR_THEME" \
         -e "/^Xcursor\.size:/c\Xcursor.size: $CURSOR_SIZE" "$HOME/.Xresources"
     grep -q "^Xcursor\.theme:" "$HOME/.Xresources" || echo "Xcursor.theme: $CURSOR_THEME" >>"$HOME/.Xresources"
-    grep -q "^Xcursor\.size:" "$HOME/.Xresources" || echo "Xcursor.size: 30" >>"$HOME/.Xresources"
+    grep -q "^Xcursor\.size:" "$HOME/.Xresources" || echo "Xcursor.size: $CURSOR_SIZE" >>"$HOME/.Xresources"
 else
     cat >"$HOME/.Xresources" <<EOF
 Xcursor.theme: $CURSOR_THEME
@@ -219,22 +232,67 @@ if [ -f "$HOME/.Xdefaults" ]; then
     sed -i -e "/^Xcursor\.theme:/c\Xcursor.theme: $CURSOR_THEME" \
         -e "/^Xcursor\.size:/c\Xcursor.size: $CURSOR_SIZE" "$HOME/.Xdefaults"
     grep -q "^Xcursor\.theme:" "$HOME/.Xdefaults" || echo "Xcursor.theme: $CURSOR_THEME" >>"$HOME/.Xdefaults"
-    grep -q "^Xcursor\.size:" "$HOME/.Xdefaults" || echo "Xcursor.size: 30" >>"$HOME/.Xdefaults"
+    grep -q "^Xcursor\.size:" "$HOME/.Xdefaults" || echo "Xcursor.size: $CURSOR_SIZE" >>"$HOME/.Xdefaults"
 fi
 if [ -f "$confDir/gtk-4.0/settings.ini" ]; then
     rm "$confDir/gtk-4.0/settings.ini"
 fi
 export -f pkg_installed
-[[ -d "$HYDE_CACHE_HOME/wallpapers/" ]] && find -H "$HYDE_CACHE_HOME/wallpapers" -name "*.png" -exec sh -c '
-    for file; do
-        base=$(basename "$file" .png)
-        if pkg_installed ${base}; then
-            "${LIB_DIR}/hyde/wallpaper.sh" --link --backend "${base}"
-        fi
-    done
-' sh {} + &
+if [[ -d "$HYDE_CACHE_HOME/wallpapers/" ]]; then
+    find -H "$HYDE_CACHE_HOME/wallpapers" -name "*.png" -exec sh -c '
+        for file; do
+            base=$(basename "$file" .png)
+            if pkg_installed ${base}; then
+                "${LIB_DIR}/hyde/wallpaper.sh" --link --backend "${base}"
+            fi
+        done
+    ' sh {} + &
+    _link_pid=$!
+    trap 'wait "$_link_pid" 2>/dev/null' EXIT
+fi
+theme_wallpaper="$(readlink "$HYDE_THEME_DIR/wall.set")"
+if [ -z "$theme_wallpaper" ] || [ ! -e "$theme_wallpaper" ]; then
+    if [ -d "$HYDE_THEME_DIR/wallpapers" ]; then
+        theme_wallpaper="$(find -H "$HYDE_THEME_DIR/wallpapers" -type f -print -quit)"
+    else
+        print_log -sec "theme" -warn "wallpaper" "$HYDE_THEME carries no wallpapers directory"
+        theme_wallpaper=""
+    fi
+    [ -n "$theme_wallpaper" ] && ln -fs "$theme_wallpaper" "$HYDE_THEME_DIR/wall.set"
+fi
+if [ -z "$theme_wallpaper" ]; then
+    print_log -sec "theme" -crit "error" "no wallpaper available for $HYDE_THEME"
+    exit 1
+fi
+wallpaper_failure_is_fatal() {
+    case "$1" in
+    "${HYDE_STATUS_CACHE_FAILED:-3}" | "${HYDE_STATUS_COLOURS_FAILED:-4}") return 0 ;;
+    esac
+    return 1
+}
+
+wallpaper_status=0
 if [ "$quiet" = true ]; then
-    "$LIB_DIR/hyde/wallpaper.sh" -s "$(readlink "$HYDE_THEME_DIR/wall.set")" --global >/dev/null 2>&1
+    wallpaper_output="$("$LIB_DIR/hyde/wallpaper.sh" -s "$theme_wallpaper" --global 2>&1)" || wallpaper_status=$?
 else
-    "$LIB_DIR/hyde/wallpaper.sh" -s "$(readlink "$HYDE_THEME_DIR/wall.set")" --global
+    "$LIB_DIR/hyde/wallpaper.sh" -s "$theme_wallpaper" --global || wallpaper_status=$?
+fi
+if [ "$wallpaper_status" -ne 0 ]; then
+    [ -n "${wallpaper_output:-}" ] && printf '%s\n' "$wallpaper_output" >&2
+    if wallpaper_failure_is_fatal "$wallpaper_status"; then
+        print_log -sec "theme" -crit "error" "generating the colour state for $HYDE_THEME failed with $wallpaper_status, the state on disk is the one the previous theme left"
+        exit 1
+    fi
+    print_log -sec "theme" -warn "wallpaper" "backend exited with $wallpaper_status, continuing with the colour state"
+fi
+if ! wallbash_state_is_complete; then
+    print_log -sec "theme" -stat "colours" "generating the colour state for $HYDE_THEME"
+    if ! "$LIB_DIR/hyde/color.set.sh" "$theme_wallpaper"; then
+        print_log -sec "theme" -crit "error" "could not generate the colour state from $theme_wallpaper"
+        exit 1
+    fi
+fi
+if ! wallbash_state_is_complete; then
+    print_log -sec "theme" -crit "error" "colour state is still incomplete for $HYDE_THEME"
+    exit 1
 fi

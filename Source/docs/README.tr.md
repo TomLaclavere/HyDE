@@ -29,7 +29,7 @@ Multi-language README support
 <a href="#updating"><kbd> <br> Güncelleme <br> </kbd></a>&ensp;&ensp;
 <a href="#themes"><kbd> <br> Temalar <br> </kbd></a>&ensp;&ensp;
 <a href="#styles"><kbd> <br> Stiller <br> </kbd></a>&ensp;&ensp;
-<a href="KEYBINDINGS.md"><kbd> <br> Tuş atamaları <br> </kbd></a>&ensp;&ensp;
+<a href="../../KEYBINDINGS.md"><kbd> <br> Tuş atamaları <br> </kbd></a>&ensp;&ensp;
 <a href="https://www.youtube.com/watch?v=2rWqdKU1vu8&list=PLt8rU_ebLsc5yEHUVsAQTqokIBMtx3RFY&index=1"><kbd> <br> Youtube <br> </kbd></a>&ensp;&ensp;
 <a href="https://hydeproject.pages.dev/"><kbd> <br> Wiki <br> </kbd></a>&ensp;&ensp;
 <a href="https://discord.gg/qWehcFJxPa"><kbd> <br> Discord <br> </kbd></a>
@@ -102,7 +102,7 @@ View installation instructions for HyDE in [Hyde-cli - Usage](https://github.com
 -->
 
 Kurulum betiği (script) tamamlandıktan ve sizi ilk kez SDDM oturum açma ekranına (veya siyah ekrana) yönlendirdikten sonra lütfen yeniden başlatın.
-Daha fazla ayrıntı için lütfen [kurulum wiki](https://github.com/HyDE-Project/HyDE/wiki/installation) sayfasına bakın.
+Daha fazla ayrıntı için lütfen [kurulum wiki](https://hydeproject.pages.dev/en/getting-started/installation) sayfasına bakın.
 
 <div align="right">
   <br>

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+shopt -s extglob
 script_dir=$(dirname "$(realpath "$0")")
 if ! source "$script_dir/globalcontrol.sh"; then
     echo "Error: unable to source globalcontrol.sh..."
@@ -56,9 +57,24 @@ else
         branch=${git_repo#*tree/}
         git_repo=${git_repo%/tree/*}
     else
-        branches_array=$(curl -s "https://api.github.com/repos/${git_repo#*://*/}/branches" | jq -r '.[].name')
-        branches_array=($branches_array)
-        if [[ ${#branches_array[@]} -le 1 ]]; then
+        # git protocol operations (unlike the GitHub REST API) are not subject
+        # to the 60 req/hour unauthenticated-caller limit, so branches are
+        # listed via `git ls-remote` instead of `curl .../branches | jq`
+        # (issue #2118: bulk theme imports were hitting that limit, and the
+        # unauthenticated curl/jq call also failed silently on error, leaving
+        # branch empty and `git clone -b ""` failing with an opaque message).
+        if ! branch_refs=$(git ls-remote --heads "$git_repo" 2>/dev/null); then
+            print_log -r "[ERROR] " "Could not reach '$git_repo' to list its branches"
+            exit 1
+        fi
+        branches_array=()
+        while IFS= read -r ref_line; do
+            [[ -n $ref_line ]] && branches_array+=("${ref_line#*refs/heads/}")
+        done <<<"$branch_refs"
+        if [[ ${#branches_array[@]} -eq 0 ]]; then
+            print_log -r "[ERROR] " "'$git_repo' has no branches"
+            exit 1
+        elif [[ ${#branches_array[@]} -eq 1 ]]; then
             branch=${branches_array[0]}
         else
             echo "Select a Branch"
@@ -121,6 +137,8 @@ wpCount="$(wc -l <<<"$wallpapers")"
 } || {
     readonly wallpapers && print_log -g "\n[pass]  " "wallpapers :: [count] $wpCount (.gif+.jpg+.jpeg+.png)"
 }
+# Walk $THEME_DIR once for all tar archives instead of per-prefix
+all_tar_files=$(find -H "$THEME_DIR" -type f -name "*.tar.*" 2>/dev/null)
 if [ -d "$FAV_THEME_DIR/logo" ]; then
     logos=$(find -H "$FAV_THEME_DIR/logo" -type f \( -iname "*.gif" -o -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \))
     logosCount="$(wc -l <<<"$logos")"
@@ -174,11 +192,34 @@ check_tars() {
         if [[ $gsVal =~ ^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$ ]]; then
             print_log -warn "Variable $gsVal detected! " "be sure $gsVal is set as a different name or on a different file, skipping check"
         else
+            # Theme authors commonly put a font style/size in the archive
+            # directory name while hypr.theme contains only the family (for
+            # example `SF Pro Rounded` vs `SF Pro Rounded Regular 10.5`).
+            # Compare trimmed names and accept an archive whose top-level
+            # directory starts with the configured value.
+            gsVal="${gsVal##+([[:space:]])}"
+            gsVal="${gsVal%%+([[:space:]])}"
             print_log -g "[pass]  " "hypr.theme :: [$gsLow]" -b " $gsVal"
-            trArc="$(find -H "$THEME_DIR" -type f -name "${inVal}_*.tar.*")"
-            [ -f "$trArc" ] && [ "$(echo "$trArc" | wc -l)" -eq 1 ] && trVal="$(basename "$(tar -tf "$trArc" | cut -d '/' -f1 | sort -u)")" && trVal="$(echo "$trVal" | grep -w "$gsVal")"
+            trArc="$(echo "$all_tar_files" | grep "/${inVal}_")"
+            trVal=""
+            if [ -f "$trArc" ] && [ "$(echo "$trArc" | wc -l)" -eq 1 ]; then
+                while IFS= read -r candidate; do
+                    candidate="${candidate%/}"
+                    if [[ "$candidate" == "$gsVal" || "$candidate" == "$gsVal "* || "$candidate" == "$gsVal-"* ]]; then
+                        trVal="$candidate"
+                        break
+                    fi
+                done < <(tar -tf "$trArc" | cut -d '/' -f1 | sort -u)
+            fi
             print_log -g "[pass]  " "../*.tar.* :: [$gsLow]" -b " $trVal"
-            [ "$trVal" != "$gsVal" ] && print_log -r "[ERROR] " "$gsLow set in hypr.theme does not exist in ${inVal}_*.tar.*" && exit_flag=true
+            if [ -z "$trVal" ]; then
+                if [ "$2" == "--mandatory" ]; then
+                    print_log -r "[ERROR] " "$gsLow set in hypr.theme does not exist in ${inVal}_*.tar.*"
+                    exit_flag=true
+                else
+                    print_log -y "[note] " "$gsLow package for '$gsVal' is missing, continuing..."
+                fi
+            fi
         fi
     else
         [ "$2" == "--mandatory" ] && print_log -r "[ERROR] " "hypr.theme :: [$gsLow]" -r " Not Found" && exit_flag=true && return 0
@@ -208,7 +249,7 @@ declare -A archive_map=(
     ["Menu-Font"]="$HOME/.local/share/fonts"
     ["Notification-Font"]="$HOME/.local/share/fonts")
 for prefix in "${!archive_map[@]}"; do
-    tarFile="$(find -H "$THEME_DIR" -type f -name "${prefix}_*.tar.*")"
+    tarFile="$(echo "$all_tar_files" | grep "/${prefix}_")"
     [ -f "$tarFile" ] || continue
     tgtDir="${archive_map[$prefix]}"
     if [[ $tgtDir =~ /(usr|usr\/local)\/share/ && -d /run/current-system/sw/share/ ]]; then

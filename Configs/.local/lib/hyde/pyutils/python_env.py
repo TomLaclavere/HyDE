@@ -4,6 +4,7 @@ import subprocess
 import shutil
 import argparse
 import importlib
+import re
 from collections.abc import Iterable
 from types import ModuleType
 
@@ -18,6 +19,7 @@ import wrapper.libnotify as notify  # noqa: E402
 # Core helpers
 # =========================
 
+
 def get_venv_path() -> str:
     """Returns the path to the virtual environment directory."""
     return os.path.join(str(xdg_base_dirs.xdg_state_home()), "hyde", "python_env")
@@ -28,22 +30,118 @@ def get_project_dir() -> str:
     return os.path.dirname(lib_dir)
 
 
-def get_uv() -> str:
-    """Finds the 'uv' executable in the system."""
-    uv = shutil.which("uv")
-    if uv is None:
-        raise FileNotFoundError(
-            "uv is not installed. Install it with 'pacman -S uv' or "
-            "'curl -LsSf https://astral.sh/uv/install.sh | sh'"
+# Minimum uv version required for the --active flag used by run_uv().
+MIN_UV_VERSION = (0, 5, 29)
+
+
+def parse_uv_version(version_output: str) -> tuple[int, int, int]:
+    """Parses the first SemVer tuple from a uv --version string."""
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", version_output)
+    if not match:
+        raise RuntimeError(f"Could not parse uv version from: {version_output!r}")
+    return tuple(int(part) for part in match.groups())
+
+
+def get_uv_version(uv_path: str) -> tuple[int, int, int]:
+    """Returns the (major, minor, patch) version of the given uv executable."""
+    result = subprocess.run(
+        [uv_path, "--version"], capture_output=True, text=True, check=True
+    )
+    return parse_uv_version(result.stdout.strip())
+
+
+def check_uv_version(uv_path: str) -> None:
+    """Raises a clear error if the resolved uv executable is too old."""
+    version = get_uv_version(uv_path)
+    if version < MIN_UV_VERSION:
+        min_version_str = ".".join(str(part) for part in MIN_UV_VERSION)
+        current_version_str = ".".join(str(part) for part in version)
+        raise RuntimeError(
+            f"uv {current_version_str} is too old. "
+            f"HyDE requires uv >= {min_version_str} for sync/add/remove. "
+            "Please upgrade uv with 'pip install --upgrade uv' or 'pacman -Syu uv'."
         )
-    return uv
+
+
+def ensure_venv(venv_path: str) -> None:
+    """Creates the virtual environment at the given path if it does not exist."""
+    if os.path.exists(venv_path):
+        if not os.path.isdir(venv_path):
+            raise NotADirectoryError(
+                f"Virtual environment path exists but is not a directory: {venv_path}"
+            )
+        return
+
+    print(f"Creating virtual environment at {venv_path}")
+    os.makedirs(os.path.dirname(venv_path), exist_ok=True)
+    uv = get_uv()
+    result = subprocess.run(
+        [uv, "venv", venv_path], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        err = result.stderr.strip() or result.stdout.strip() or "uv venv failed"
+        notify.send("HyDE UV", f"Failed to create virtual environment:\n{err}", urgency="critical")
+        raise RuntimeError(f"Failed to create virtual environment: {err}")
+
+
+
+def get_uv() -> str:
+    """Finds or installs the 'uv' executable in the HyDE venv."""
+    venv_path = get_venv_path()
+    uv_venv = os.path.join(venv_path, "bin", "uv")
+
+    # Check if uv exists in the HyDE venv
+    if os.path.isfile(uv_venv) and os.access(uv_venv, os.X_OK):
+        return uv_venv
+
+    # Check if uv exists system-wide
+    uv_system = shutil.which("uv")
+    if uv_system:
+        return uv_system
+
+    # Create venv and install uv if neither exists
+    print("Setting up Python environment and installing uv...")
+    setup_venv_with_uv()
+
+    # Return the venv uv after setup
+    if os.path.isfile(uv_venv) and os.access(uv_venv, os.X_OK):
+        return uv_venv
+
+    raise FileNotFoundError(
+        "Failed to install uv. Please install it manually with "
+        "'pacman -S uv' or 'curl -LsSf https://astral.sh/uv/install.sh | sh'"
+    )
+
+
+def setup_venv_with_uv() -> None:
+    """Creates a Python venv and installs uv into it using pip, then uv takes over the venv."""
+    venv_path = get_venv_path()
+
+    # Create venv if it doesn't exist
+    if not os.path.exists(venv_path):
+        print(f"Creating venv at {venv_path}")
+        subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+
+    # Get pip and python from venv
+    pip_exe = os.path.join(venv_path, "bin", "pip")
+    python_exe = os.path.join(venv_path, "bin", "python")
+
+    # Install uv using pip, then uv takes over the venv
+    print("Installing uv using pip...")
+    subprocess.run([python_exe, "-m", "pip", "install", "--upgrade", "pip"], check=True)
+    subprocess.run([pip_exe, "install", "uv"], check=True)
+
+    notify.send("HyDE UV", "✅ Python environment and uv installed")
 
 
 # =========================
 # Execution layer
 # =========================
 
-def run_uv(args, venv_path: str = None, notify_msg: str = None, stream: bool = False) -> subprocess.CompletedProcess[str]:
+
+def run_uv(
+    args, venv_path: str = None, notify_msg: str = None, stream: bool = False
+) -> subprocess.CompletedProcess[str]:
     """Runs a uv command with the given arguments and environment.
 
     If stream=True, uv output is written directly to the terminal (for animations/progress).
@@ -64,6 +162,25 @@ def run_uv(args, venv_path: str = None, notify_msg: str = None, stream: bool = F
         notify.send("HyDE UV", notify_msg, replace_id=9)
 
     cmd = [uv] + args + ["--project", project_dir]
+    # uv sync (and the sync phase of add/remove) creates the project environment
+    # in a .venv directory by default. Point it at the HyDE venv with --active
+    # and force a copy-based install to avoid silent reflink failures on ext4.
+    if args and args[0] in ("sync", "add", "remove"):
+        # If system uv is too old for --active, bootstrap uv in HyDE's venv and retry.
+        try:
+            check_uv_version(uv)
+        except RuntimeError:
+            uv_venv = os.path.join(venv_path, "bin", "uv")
+            if uv != uv_venv:
+                setup_venv_with_uv()
+                uv = get_uv()
+                cmd[0] = uv
+                check_uv_version(uv)
+            else:
+                raise
+        ensure_venv(venv_path)
+        env["VIRTUAL_ENV"] = venv_path
+        cmd.extend(["--active", "--link-mode", "copy"])
 
     if stream:
         result = subprocess.run(cmd, env=env)
@@ -85,6 +202,7 @@ def run_uv(args, venv_path: str = None, notify_msg: str = None, stream: bool = F
 # =========================
 # Venv logic
 # =========================
+
 
 def is_venv_valid(venv_path: str) -> bool:
     """Checks if the virtual environment at the given path is valid."""
@@ -148,11 +266,10 @@ def rebuild_venv() -> None:
 
 
 def sync_packages() -> None:
-    """Installs dependencies from pyproject.toml explicitly."""
-    project_dir = get_project_dir()
-    toml_file = os.path.join(project_dir, "pyproject.toml")
-    run_uv(["pip", "install", "-U", "-r", toml_file],notify_msg="📦 Syncing dependencies...")
+    """Installs dependencies from pyproject.toml using uv sync."""
+    run_uv(["sync"], notify_msg="📦 Syncing dependencies...")
     notify.send("HyDE UV", "✅ Dependencies are up to date", replace_id=9)
+
 
 def install_package(package: str | Iterable[str]) -> None:
     """Installs a package or list of packages using uv."""
@@ -191,9 +308,11 @@ def uninstall_package(package: str | Iterable[str]) -> None:
         notify.send("HyDE UV", f"Error uninstalling packages: {e}", urgency="critical")
         raise
 
+
 # =========================
 # Import helpers
 # =========================
+
 
 def inject_site_packages() -> None:
     """Ensures the virtual environment's site-packages is in sys.path."""
@@ -250,6 +369,7 @@ def v_import(module_name: str, auto_install: bool = True, extra: str = None) -> 
 # CLI commands
 # =========================
 
+
 def cmd_create(_) -> None:
     create_venv()
 
@@ -263,7 +383,7 @@ def cmd_install(args) -> None:
 
 
 def cmd_uninstall(args) -> None:
-        uninstall_package(args.packages)
+    uninstall_package(args.packages)
 
 
 def cmd_destroy(_) -> None:
@@ -300,6 +420,7 @@ COMMANDS = {
 # =========================
 # CLI entry
 # =========================
+
 
 def main(argv) -> None:
     parser = argparse.ArgumentParser(
