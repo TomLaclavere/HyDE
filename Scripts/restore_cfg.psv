@@ -151,3 +151,9 @@ P|${HOME}/.config/hypr|hypridle.conf|hypridle
 
  Bluelight filter daemon 
 P|${HOME}/.config/hypr|hyprsunset.conf|hyprsunset
+
+ Perso (TomLaclavere) 
+P|${HOME}/.config/hyde/themes/Dracula|wallpapers|hyprland
+P|${HOME}/.local/bin|toggle-laser-cursor.sh|hyprland
+P|${HOME}/.icons|RedDot|hyprland
+P|${HOME}/.config/micro|settings.json bindings.json colorschemes|micro
