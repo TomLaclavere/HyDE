@@ -4,7 +4,9 @@
     font-size: 14px;
 }
 
+/* ========================= */
 /* ? Leaf shape */
+/* ========================= */
 
 window#waybar.top #leaf,
 window#waybar.top #leaf button,
@@ -16,8 +18,8 @@ window#waybar.bottom #leaf button,
 window#waybar.bottom #leaf menu,
 window#waybar.bottom #leaf menuitem,
 window#waybar.bottom #leaf tooltip {
-    border-radius: 23pt 0 23pt 0;
-    margin: 2 0;
+    border-radius: 23px 0px 23px 0px;
+    margin: 2px 0px;
 }
 
 window#waybar.left #leaf,
@@ -30,11 +32,13 @@ window#waybar.right #leaf button,
 window#waybar.right #leaf menu,
 window#waybar.right #leaf menuitem,
 window#waybar.right #leaf tooltip {
-    border-radius: 23pt 0 23pt 0;
-    margin: 2 0;
+    border-radius: 23px 0px 23px 0px;
+    margin: 2px 0px;
 }
 
+/* ========================= */
 /* ? Inverse Leaf shape */
+/* ========================= */
 
 window#waybar.top #leaf-inverse,
 window#waybar.top #leaf-inverse button,
@@ -46,8 +50,8 @@ window#waybar.bottom #leaf-inverse button,
 window#waybar.bottom #leaf-inverse menu,
 window#waybar.bottom #leaf-inverse menuitem,
 window#waybar.bottom #leaf-inverse tooltip {
-    border-radius: 0 23pt 0 23pt;
-    margin: 2 0;
+    border-radius: 0px 23px 0px 23px;
+    margin: 2px 0px;
 }
 
 window#waybar.left #leaf-inverse,
@@ -60,44 +64,45 @@ window#waybar.right #leaf-inverse button,
 window#waybar.right #leaf-inverse menu,
 window#waybar.right #leaf-inverse menuitem,
 window#waybar.right #leaf-inverse tooltip {
-    border-radius: 0 23pt 0 23pt;
-    margin: 2 0;
+    border-radius: 0px 23px 0px 23px;
+    margin: 2px 0px;
 }
 
+/* ========================= */
+/* ? Full Pill shape */
+/* ========================= */
 
-/* ? Full Pill  shape*/
-
-window#waybar.bottom #pill menuitem,
-window#waybar.bottom #pill menu,
-window#waybar.bottom #pill tooltip,
 window#waybar.bottom #pill,
 window#waybar.bottom #pill button,
-window#waybar.top #pill menuitem,
-window#waybar.top #pill menu,
-window#waybar.top #pill tooltip,
+window#waybar.bottom #pill menu,
+window#waybar.bottom #pill menuitem,
+window#waybar.bottom #pill tooltip,
 window#waybar.top #pill,
-window#waybar.top #pill button {
-    border-radius: 23pt 23pt 23pt 23pt;
-    margin: 2 0;
+window#waybar.top #pill button,
+window#waybar.top #pill menu,
+window#waybar.top #pill menuitem,
+window#waybar.top #pill tooltip {
+    border-radius: 23px;
+    margin: 2px 0px;
 }
 
-window#waybar.left #pill menuitem,
-window#waybar.left #pill menu,
-window#waybar.left #pill tooltip,
 window#waybar.left #pill,
 window#waybar.left #pill button,
-window#waybar.right #pill menuitem,
-window#waybar.right #pill menu,
-window#waybar.right #pill tooltip,
+window#waybar.left #pill menu,
+window#waybar.left #pill menuitem,
+window#waybar.left #pill tooltip,
 window#waybar.right #pill,
-window#waybar.right #pill button {
-    border-radius: 23pt 23pt 23pt 23pt;
-    margin: 2 0;
+window#waybar.right #pill button,
+window#waybar.right #pill menu,
+window#waybar.right #pill menuitem,
+window#waybar.right #pill tooltip {
+    border-radius: 23px;
+    margin: 2px 0px;
 }
 
-
-/* ? half pill with the curve pointing dowmwards */
-
+/* ========================= */
+/* ? pill-down */
+/* ========================= */
 
 window#waybar.top #pill-down,
 window#waybar.top #pill-down button,
@@ -109,68 +114,31 @@ window#waybar.bottom #pill-down button,
 window#waybar.bottom #pill-down menu,
 window#waybar.bottom #pill-down menuitem,
 window#waybar.bottom #pill-down tooltip {
-    border-radius: 0 0 23pt 23pt;
-    margin: 2 0;
+    border-radius: 0px 0px 23px 23px;
+    margin: 2px 0px;
 }
 
-window#waybar.left #pill-down,
-window#waybar.left #pill-down button,
-window#waybar.left #pill-down menu,
-window#waybar.left #pill-down menuitem,
-window#waybar.left #pill-down tooltip,
-window#waybar.right #pill-down,
-window#waybar.right #pill-down button,
-window#waybar.right #pill-down menu,
-window#waybar.right #pill-down menuitem,
-window#waybar.right #pill-down tooltip {
-    border-radius: 0 0 23pt 23pt;
-    margin: 2 0;
-}
-
-
-/* 
-? half pill with the curve pointing inwards 
-*/
+/* ========================= */
+/* ? pill-in */
+/* ========================= */
 
 window#waybar.top #pill-in,
 window#waybar.top #pill-in button,
 window#waybar.top #pill-in menu,
 window#waybar.top #pill-in menuitem,
-window#waybar.top #pill-in tooltip {
-    border-radius: 0 0 23pt 23pt;
-    margin: 2 0;
-}
-
+window#waybar.top #pill-in tooltip,
 window#waybar.right #pill-in,
 window#waybar.right #pill-in button,
 window#waybar.right #pill-in menu,
 window#waybar.right #pill-in menuitem,
 window#waybar.right #pill-in tooltip {
-    border-radius: 23pt 0 0 23pt;
-    margin: 2 0;
+    border-radius: 0px 0px 23px 23px;
+    margin: 2px 0px;
 }
 
-window#waybar.bottom #pill-in,
-window#waybar.bottom #pill-in button,
-window#waybar.bottom #pill-in menu,
-window#waybar.bottom #pill-in menuitem,
-window#waybar.bottom #pill-in tooltip {
-    border-radius: 23pt 23pt 0 0;
-    margin: 2 0;
-}
-
-window#waybar.left #pill-in,
-window#waybar.left #pill-in button,
-window#waybar.left #pill-in menu,
-window#waybar.left #pill-in menuitem,
-window#waybar.left #pill-in tooltip {
-    border-radius: 0 23pt 23pt 0;
-    margin: 2 0;
-}
-
-
-
-/* ? half pill with the curve pointing to left */
+/* ========================= */
+/* ? pill-left */
+/* ========================= */
 
 window#waybar.top #pill-left,
 window#waybar.top #pill-left button,
@@ -182,98 +150,39 @@ window#waybar.bottom #pill-left button,
 window#waybar.bottom #pill-left menu,
 window#waybar.bottom #pill-left menuitem,
 window#waybar.bottom #pill-left tooltip {
-    border-radius: 23pt 0 0 23pt;
-    margin: 2 0;
+    border-radius: 23px 0px 0px 23px;
+    margin: 2px 0px;
 }
 
-window#waybar.left #pill-left,
-window#waybar.left #pill-left button,
-window#waybar.left #pill-left menu,
-window#waybar.left #pill-left menuitem,
-window#waybar.left #pill-left tooltip,
-window#waybar.right #pill-left,
-window#waybar.right #pill-left button,
-window#waybar.right #pill-left menu,
-window#waybar.right #pill-left menuitem,
-window#waybar.right #pill-left tooltip {
-    border-radius: 23pt 0 0 23pt;
-    margin: 2 0;
-}
-
-
-/* ? half pill with the curve pointing to outwards */
-
+/* ========================= */
+/* ? pill-out */
+/* ========================= */
 
 window#waybar.top #pill-out,
 window#waybar.top #pill-out button,
 window#waybar.top #pill-out menu,
 window#waybar.top #pill-out menuitem,
 window#waybar.top #pill-out tooltip {
-    border-radius: 23pt 23pt 0 0;
-    margin: 2 0;
+    border-radius: 23px 23px 0px 0px;
+    margin: 2px 0px;
 }
 
-window#waybar.right #pill-out,
-window#waybar.right #pill-out button,
-window#waybar.right #pill-out menu,
-window#waybar.right #pill-out menuitem,
-window#waybar.right #pill-out tooltip {
-    border-radius: 0 23pt 23pt 0;
-    margin: 2 0;
-}
-
-window#waybar.bottom #pill-out,
-window#waybar.bottom #pill-out button,
-window#waybar.bottom #pill-out menu,
-window#waybar.bottom #pill-out menuitem,
-window#waybar.bottom #pill-out tooltip {
-    border-radius: 0 0 23pt 23pt;
-    margin: 2 0;
-}
-
-window#waybar.left #pill-out,
-window#waybar.left #pill-out button,
-window#waybar.left #pill-out menu,
-window#waybar.left #pill-out menuitem,
-window#waybar.left #pill-out tooltip {
-    border-radius: 23pt 0 0 23pt;
-    margin: 2 0;
-}
-
-
-/* ============================ */
-/* ? half pill with the curve pointing to the right */
+/* ========================= */
+/* ? pill-right */
+/* ========================= */
 
 window#waybar.top #pill-right,
 window#waybar.top #pill-right button,
-window#waybar.bottom #pill-right menu,
-window#waybar.bottom #pill-right menuitem,
-window#waybar.bottom #pill-right tooltip,
-window#waybar.bottom #pill-right,
-window#waybar.bottom #pill-right button,
 window#waybar.top #pill-right menu,
 window#waybar.top #pill-right menuitem,
 window#waybar.top #pill-right tooltip {
-    border-radius: 0 23pt 23pt 0;
-    margin: 2 0;
+    border-radius: 0px 23px 23px 0px;
+    margin: 2px 0px;
 }
 
-window#waybar.left #pill-right,
-window#waybar.left #pill-right button,
-window#waybar.right #pill-right menu,
-window#waybar.right #pill-right menuitem,
-window#waybar.right #pill-right tooltip,
-window#waybar.right #pill-right,
-window#waybar.right #pill-right button,
-window#waybar.left #pill-right menu,
-window#waybar.left #pill-right menuitem,
-window#waybar.left #pill-right tooltip {
-    border-radius: 0 23pt 23pt 0;
-    margin: 2 0;
-}
-
-
-/* ? half pill with the flat surface pointing upwards */
+/* ========================= */
+/* ? pill-up */
+/* ========================= */
 
 window#waybar.top #pill-up,
 window#waybar.top #pill-up button,
@@ -285,20 +194,6 @@ window#waybar.bottom #pill-up button,
 window#waybar.bottom #pill-up menu,
 window#waybar.bottom #pill-up menuitem,
 window#waybar.bottom #pill-up tooltip {
-    border-radius: 23pt 23pt 0 0;
-    margin: 2 2;
-}
-
-window#waybar.left #pill-up,
-window#waybar.left #pill-up button,
-window#waybar.left #pill-up menu,
-window#waybar.left #pill-up menuitem,
-window#waybar.left #pill-up tooltip,
-window#waybar.right #pill-up,
-window#waybar.right #pill-up button,
-window#waybar.right #pill-up menu,
-window#waybar.right #pill-up menuitem,
-window#waybar.right #pill-up tooltip {
-    border-radius: 23pt 23pt 0 0;
-    margin: 2 2;
+    border-radius: 23px 23px 0px 0px;
+    margin: 2px 2px;
 }

@@ -68,12 +68,11 @@
         ],
     },
     "group/pill-right#center2": {
-            "modules": [
-                "hyprland/workspaces",
-                "hyprland/window"
-            ],
-            "orientation": "inherit"
-        },
+    	"orientation": "inherit",
+        "modules": [
+        	"hyprland/workspaces"
+        ],
+    },
     "group/pill-up#right": {
         "orientation": "inherit",
         "modules": [
