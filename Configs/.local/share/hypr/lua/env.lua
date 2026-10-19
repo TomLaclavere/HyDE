@@ -3,17 +3,21 @@ hyde.env.finalize()
 
 -- hl.env sets PATH on the live compositor process, so it is still there for
 -- os.getenv on the next `hyprctl reload` -- appending unconditionally grows it
--- by one more copy of hyde.path.lib every reload (#1521).
+-- by one more copy of the scripts dir every reload (#1521).
+-- The scripts live in lib/hyde (the old $scrPath), not lib itself: without it
+-- on PATH, bare calls such as `battery.sh` in hyprlock or `lockscreen.sh` in
+-- wlogout are not found.
+local scripts_path = hyde.path.lib .. "/hyde"
 local current_path = hyde.env("PATH") or ""
 local already_on_path = false
 for segment in (current_path .. ":"):gmatch("([^:]*):") do
-	if segment == hyde.path.lib then
+	if segment == scripts_path then
 		already_on_path = true
 		break
 	end
 end
 if not already_on_path then
-	hl.env("PATH", current_path == "" and hyde.path.lib or current_path .. ":" .. hyde.path.lib)
+	hl.env("PATH", current_path == "" and scripts_path or current_path .. ":" .. scripts_path)
 end
 -- ? Isolate dconf (Prevents already-opened GTK apps (brave, nwg-displays, etc.) from updating their theme)
 -- hl.env("DCONF_PROFILE",  ((os.getenv("XDG_CONFIG_HOME") ~= "" and os.getenv("XDG_CONFIG_HOME")) or (os.getenv("HOME") or "" ) .. "/.config") .. "/dconf/profile/hyde_hyprland")
