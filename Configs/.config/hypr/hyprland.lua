@@ -70,8 +70,14 @@ for _, cmd in ipairs({
     hl.exec_cmd(cmd)
 end
 
+-- Apps lancées au démarrage (ex-startup.conf, que la config Lua ne lit plus)
 hl.on("hyprland.start", function()
     hl.exec_cmd("xsettingsd")
+    hl.exec_cmd("thunderbird")
+    hl.exec_cmd("brave")
+    hl.exec_cmd("protonvpn-app")
+    hl.exec_cmd("protonmail-bridge")
+    hl.exec_cmd("kdeconnect-indicator")
 end)
 
 -- Raccourcis perso
